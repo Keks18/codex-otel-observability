@@ -1,0 +1,9 @@
+# Merge this section into the user-level Codex config.toml.
+# Do not place OTEL routing in a project-level .codex/config.toml.
+
+[otel]
+environment = "local"
+log_user_prompt = false
+exporter = { otlp-http = { endpoint = "http://127.0.0.1:4318/v1/logs", protocol = "binary" } }
+trace_exporter = { otlp-http = { endpoint = "http://127.0.0.1:4318/v1/traces", protocol = "binary" } }
+metrics_exporter = { otlp-http = { endpoint = "http://127.0.0.1:4318/v1/metrics", protocol = "binary" } }

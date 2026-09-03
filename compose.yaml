@@ -1,0 +1,39 @@
+name: codex-otel-observability
+
+services:
+  lgtm:
+    image: grafana/otel-lgtm:0.32.0
+    container_name: codex-otel-lgtm
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - lgtm-data:/data
+      - ./grafana/dashboards/codex-overview.json:/otel-lgtm/grafana/conf/provisioning/dashboards/codex/codex-overview.json:ro
+      - ./grafana/provisioning/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/codex.yaml:ro
+    networks:
+      - observability
+
+  collector:
+    image: otel/opentelemetry-collector:0.159.0
+    container_name: codex-otel-collector
+    restart: unless-stopped
+    command:
+      - --config=/etc/otelcol/config.yaml
+    depends_on:
+      lgtm:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4318:4318"
+    volumes:
+      - ./config/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    networks:
+      - observability
+
+networks:
+  observability:
+    name: codex-observability
+
+volumes:
+  lgtm-data:
+    name: codex-otel-lgtm-data

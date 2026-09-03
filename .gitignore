@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+*.local
+*.log
+*.zip
+*.tar
+*.tar.gz
+data/
+artifacts/
+reports/
+graphify-out/
+.DS_Store
+Thumbs.db
