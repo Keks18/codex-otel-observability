@@ -5,6 +5,25 @@ receivers:
         endpoint: 0.0.0.0:4318
 
 processors:
+  filter/privacy:
+    error_mode: ignore
+    logs:
+      log_record:
+        # The pinned collector has no transform processor to sanitize log bodies.
+        # Drop logs before export so tool-result output snippets never reach Loki.
+        - 'true'
+  attributes/privacy:
+    actions:
+      - pattern: (?i)^(prompt|user_prompt|input|tool_input|arguments|tool_arguments|output|tool_output|payload|content|message|body)$
+        action: delete
+      - pattern: (?i)^(error\.message|exception\.message|exception\.stacktrace)$
+        action: delete
+      - pattern: (?i)^(user\..*|enduser\..*|user_(id|name|email)|email|username)$
+        action: delete
+  resource/privacy:
+    attributes:
+      - pattern: (?i)^(user\..*|enduser\..*|user_(id|name|email)|email|username)$
+        action: delete
   batch: {}
 
 exporters:
@@ -15,13 +34,13 @@ service:
   pipelines:
     logs:
       receivers: [otlp]
-      processors: [batch]
+      processors: [filter/privacy, attributes/privacy, resource/privacy, batch]
       exporters: [otlphttp/lgtm]
     traces:
       receivers: [otlp]
-      processors: [batch]
+      processors: [attributes/privacy, resource/privacy, batch]
       exporters: [otlphttp/lgtm]
     metrics:
       receivers: [otlp]
-      processors: [batch]
+      processors: [resource/privacy, batch]
       exporters: [otlphttp/lgtm]

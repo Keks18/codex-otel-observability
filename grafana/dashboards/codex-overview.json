@@ -1,182 +1,321 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": []
+  },
   "editable": true,
   "refresh": "10s",
   "schemaVersion": 41,
-  "tags": ["codex", "opentelemetry", "performance", "local"],
+  "tags": [
+    "codex",
+    "opentelemetry",
+    "performance",
+    "local"
+  ],
   "templating": {
     "list": [
       {
-        "current": {},
-        "datasource": { "type": "tempo", "uid": "tempo" },
+        "current": {
+          "text": "",
+          "value": ""
+        },
         "definition": "",
         "includeAll": false,
         "label": "Project cwd",
         "name": "cwd",
         "options": [],
-        "query": {
-          "label": "cwd",
-          "refId": "TempoDatasourceVariableQueryEditor-VariableQuery",
-          "type": 1
-        },
-        "refresh": 2,
+        "query": "",
+        "refresh": 0,
         "regex": "",
-        "regexApplyTo": "value",
         "skipUrlSync": false,
-        "type": "query"
+        "type": "textbox"
       }
     ]
   },
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "timezone": "browser",
   "title": "Codex Overview",
   "uid": "codex-overview",
-  "version": 14,
+  "version": 17,
   "panels": [
     {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
-      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 0 },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
       "id": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
           "metricsQueryType": "instant",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) | { name = \"session_task.turn\" } | count_over_time()",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | count_over_time()",
           "queryType": "traceql",
           "refId": "A"
         }
       ],
-      "title": "Turns",
-      "type": "stat"
+      "title": "Completed turns",
+      "type": "stat",
+      "description": "Distinct completed turn spans inside the project-scoped snapshot. Active/incomplete traces are excluded and surfaced below."
     },
     {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "fieldConfig": { "defaults": { "decimals": 1, "unit": "s" }, "overrides": [] },
-      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 0 },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
       "id": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
           "metricsQueryType": "instant",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) | { name = \"session_task.turn\" } | avg_over_time(span:duration)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | avg_over_time(span:duration)",
           "queryType": "traceql",
           "refId": "A"
         }
       ],
       "title": "Avg duration",
-      "type": "stat"
+      "type": "stat",
+      "description": "Average canonical completed-turn duration."
     },
     {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
-      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 0 },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
       "id": 3,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
           "metricsQueryType": "instant",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) | { name = \"session_task.turn\" } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\")",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\")",
           "queryType": "traceql",
           "refId": "A"
         }
       ],
       "title": "Total tokens",
-      "type": "stat"
+      "type": "stat",
+      "description": "Completed-turn total tokens; totals come only from canonical turn attributes."
     },
     {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "fieldConfig": { "defaults": { "decimals": 1, "unit": "percent" }, "overrides": [] },
-      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 0 },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
       "id": 4,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
           "hide": true,
           "metricsQueryType": "instant",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) | { name = \"session_task.turn\" } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\")",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\")",
           "queryType": "traceql",
           "refId": "A"
         },
         {
-          "datasource": { "type": "tempo", "uid": "tempo" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
           "hide": true,
           "metricsQueryType": "instant",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) | { name = \"session_task.turn\" } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\")",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\")",
           "queryType": "traceql",
           "refId": "B"
         },
         {
-          "datasource": { "type": "__expr__", "uid": "__expr__" },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
           "expression": "A",
           "hide": true,
           "reducer": "last",
           "refId": "C",
-          "settings": { "mode": "dropNN" },
+          "settings": {
+            "mode": "dropNN"
+          },
           "type": "reduce"
         },
         {
-          "datasource": { "type": "__expr__", "uid": "__expr__" },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
           "expression": "B",
           "hide": true,
           "reducer": "last",
           "refId": "D",
-          "settings": { "mode": "dropNN" },
+          "settings": {
+            "mode": "dropNN"
+          },
           "type": "reduce"
         },
         {
-          "datasource": { "type": "__expr__", "uid": "__expr__" },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
           "expression": "$C / $D * 100",
           "refId": "E",
           "type": "math"
         }
       ],
       "title": "Cache hit %",
-      "type": "stat"
+      "type": "stat",
+      "description": "100 × cached input / input for completed turns. Cached input is included in input."
     },
     {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
-      "gridPos": { "h": 5, "w": 4, "x": 16, "y": 0 },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
       "id": 5,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
           "metricsQueryType": "instant",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | count_over_time()",
           "queryType": "traceql",
@@ -184,114 +323,978 @@
         }
       ],
       "title": "Tool calls",
-      "type": "stat"
+      "type": "stat",
+      "description": "Terminal top-level tool outcomes joined to the selected project by Trace ID."
     },
     {
-      "datasource": { "type": "tempo", "uid": "tempo" },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "red", "mode": "fixed" },
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
           "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 4, "x": 20, "y": 0 },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
       "id": 6,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
           "metricsQueryType": "instant",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { event.success = \"false\" }) | { event.success = \"false\" } | count_over_time()",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" } | count_over_time()",
           "queryType": "traceql",
           "refId": "A"
         }
       ],
       "title": "Tool failures",
-      "type": "stat"
+      "type": "stat",
+      "description": "Failed terminal outcomes from the same canonical tool-call set used by the failure table."
     },
     {
-      "datasource": { "type": "tempo", "uid": "tempo" },
+      "id": 16,
+      "type": "text",
+      "title": "Snapshot contract",
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Project:** `${cwd:regex}`  \n**from:** `${__from:date:iso}`  \n**as_of:** `${__to:date:iso}`\n\nKPI include completed turns only. For a repeatable snapshot, select an **absolute** dashboard time range; auto-refresh remains 10s but the bounds do not move."
+      }
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Incomplete exported turns",
+      "description": "Exported turn spans without completion token attributes. In-flight spans are not exported; active candidates are inferred by the report with a 120s grace window at the same as_of.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "legendFormat": "Incomplete",
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && span.\"codex.turn.token_usage.total_tokens\" = nil }) | { name = \"session_task.turn\" && span.\"codex.turn.token_usage.total_tokens\" = nil } | count_over_time()",
+          "queryType": "traceql",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
       "fieldConfig": {
         "defaults": {},
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "time" },
+            "matcher": {
+              "id": "byName",
+              "options": "time"
+            },
             "properties": [
-              { "id": "displayName", "value": "Timestamp" },
-              { "id": "unit", "value": "dateTimeAsIso" },
-              { "id": "custom.width", "value": 190 }
+              {
+                "id": "displayName",
+                "value": "Timestamp"
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              },
+              {
+                "id": "custom.width",
+                "value": 190
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "cwd" },
+            "matcher": {
+              "id": "byName",
+              "options": "cwd"
+            },
             "properties": [
-              { "id": "displayName", "value": "cwd" },
-              { "id": "custom.width", "value": 210 }
+              {
+                "id": "displayName",
+                "value": "cwd"
+              },
+              {
+                "id": "custom.width",
+                "value": 210
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "model" },
+            "matcher": {
+              "id": "byName",
+              "options": "model"
+            },
             "properties": [
-              { "id": "displayName", "value": "Model" },
-              { "id": "custom.width", "value": 120 }
+              {
+                "id": "displayName",
+                "value": "Model"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "codex.turn.reasoning_effort" },
+            "matcher": {
+              "id": "byName",
+              "options": "codex.turn.reasoning_effort"
+            },
             "properties": [
-              { "id": "displayName", "value": "Reasoning effort" },
-              { "id": "custom.width", "value": 120 }
+              {
+                "id": "displayName",
+                "value": "Reasoning effort"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "duration" },
+            "matcher": {
+              "id": "byName",
+              "options": "duration"
+            },
             "properties": [
-              { "id": "displayName", "value": "Duration" },
-              { "id": "unit", "value": "ns" },
-              { "id": "decimals", "value": 1 },
-              { "id": "custom.width", "value": 110 }
+              {
+                "id": "displayName",
+                "value": "Duration"
+              },
+              {
+                "id": "unit",
+                "value": "ns"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "codex.turn.token_usage.input_tokens" },
-            "properties": [{ "id": "displayName", "value": "Input tokens" }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "codex.turn.token_usage.output_tokens" },
-            "properties": [{ "id": "displayName", "value": "Output tokens" }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "codex.turn.token_usage.reasoning_output_tokens" },
-            "properties": [{ "id": "displayName", "value": "Reasoning tokens" }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "codex.turn.token_usage.cached_input_tokens" },
-            "properties": [{ "id": "displayName", "value": "Cached tokens" }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "tool_calls" },
-            "properties": [{ "id": "displayName", "value": "Tool calls" }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "model_rounds" },
-            "properties": [{ "id": "displayName", "value": "Model rounds" }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "failures" },
-            "properties": [{ "id": "displayName", "value": "Failures" }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "traceIdHidden" },
+            "matcher": {
+              "id": "byName",
+              "options": "codex.turn.token_usage.input_tokens"
+            },
             "properties": [
-              { "id": "displayName", "value": "Trace ID" },
-              { "id": "custom.width", "value": 250 },
+              {
+                "id": "displayName",
+                "value": "Input tokens"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "codex.turn.token_usage.output_tokens"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Output tokens"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "codex.turn.token_usage.reasoning_output_tokens"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Reasoning tokens"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "codex.turn.token_usage.cached_input_tokens"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Cached tokens"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tool_calls"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Tool calls"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "model_rounds"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Model rounds"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failures"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failures"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "traceIdHidden"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace ID"
+              },
+              {
+                "id": "custom.width",
+                "value": 250
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "internal": {
+                      "datasourceName": "Tempo",
+                      "datasourceUid": "tempo",
+                      "query": {
+                        "query": "${__value.raw}",
+                        "queryType": "traceql"
+                      }
+                    },
+                    "title": "Open trace in Tempo"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "non_cached_input_tokens"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Non-cached input"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "codex.turn.token_usage.total_tokens"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Total tokens"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cache_hit_ratio"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Cache hit"
+              },
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 7,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Timestamp"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "hide": true,
+          "limit": 200,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"responses_websocket.stream_request\" }) | { name = \"responses_websocket.stream_request\" }",
+          "queryType": "traceqlSearch",
+          "refId": "B",
+          "spss": 100,
+          "tableType": "spans"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "hide": true,
+          "limit": 200,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | select(span.model, span.\"codex.turn.reasoning_effort\", span.\"codex.turn.token_usage.input_tokens\", span.\"codex.turn.token_usage.output_tokens\", span.\"codex.turn.token_usage.reasoning_output_tokens\", span.\"codex.turn.token_usage.cached_input_tokens\", span.\"codex.turn.token_usage.total_tokens\")",
+          "queryType": "traceqlSearch",
+          "refId": "A",
+          "spss": 1,
+          "tableType": "spans"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "hide": true,
+          "limit": 200,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" }",
+          "queryType": "traceqlSearch",
+          "refId": "C",
+          "spss": 100,
+          "tableType": "spans"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "hide": true,
+          "limit": 200,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }",
+          "queryType": "traceqlSearch",
+          "refId": "D",
+          "spss": 100,
+          "tableType": "spans"
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "WITH rounds AS (SELECT traceIdHidden AS trace_id, COUNT(*) AS model_rounds FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden AS trace_id, COUNT(*) AS tool_calls FROM C GROUP BY traceIdHidden), failures AS (SELECT traceIdHidden AS trace_id, COUNT(*) AS failures FROM D GROUP BY traceIdHidden) SELECT A.*, '${cwd:regex}' AS cwd, COALESCE(rounds.model_rounds, 0) AS model_rounds, COALESCE(tools.tool_calls, 0) AS tool_calls, COALESCE(failures.failures, 0) AS failures FROM A LEFT JOIN rounds ON rounds.trace_id = A.traceIdHidden LEFT JOIN tools ON tools.trace_id = A.traceIdHidden LEFT JOIN failures ON failures.trace_id = A.traceIdHidden ORDER BY A.time DESC",
+          "refId": "E",
+          "type": "sql"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "non_cached_input_tokens",
+            "binary": {
+              "left": "codex.turn.token_usage.input_tokens",
+              "operator": "-",
+              "right": "codex.turn.token_usage.cached_input_tokens"
+            },
+            "mode": "binary",
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "cache_hit_ratio",
+            "binary": {
+              "left": "codex.turn.token_usage.cached_input_tokens",
+              "operator": "/",
+              "right": "codex.turn.token_usage.input_tokens"
+            },
+            "mode": "binary",
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "name": true,
+              "spanID": true,
+              "traceName": true,
+              "traceService": true
+            },
+            "indexByName": {
+              "time": 0,
+              "cwd": 1,
+              "model": 2,
+              "codex.turn.reasoning_effort": 3,
+              "duration": 4,
+              "codex.turn.token_usage.input_tokens": 5,
+              "codex.turn.token_usage.output_tokens": 8,
+              "codex.turn.token_usage.reasoning_output_tokens": 9,
+              "codex.turn.token_usage.cached_input_tokens": 6,
+              "model_rounds": 12,
+              "tool_calls": 13,
+              "failures": 14,
+              "traceIdHidden": 15,
+              "non_cached_input_tokens": 7,
+              "codex.turn.token_usage.total_tokens": 10,
+              "cache_hit_ratio": 11
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "title": "Turns",
+      "type": "table",
+      "description": "Completed turns only. Rounds, tools, and failures are joined by Trace ID; no strict parent/descendant assumption."
+    },
+    {
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "legendFormat": "{{span.model}}",
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | avg_over_time(span:duration) by (span.model)",
+          "queryType": "traceql",
+          "refId": "A"
+        }
+      ],
+      "title": "Duration by model",
+      "type": "timeseries",
+      "description": "Completed turns only; model is read from the canonical turn span."
+    },
+    {
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\") by (span.model)",
+          "queryType": "traceql",
+          "refId": "A",
+          "legendFormat": "Input"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\") by (span.model)",
+          "queryType": "traceql",
+          "refId": "B",
+          "legendFormat": "Cached input"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.output_tokens\") by (span.model)",
+          "queryType": "traceql",
+          "refId": "C",
+          "legendFormat": "Output"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.reasoning_output_tokens\") by (span.model)",
+          "queryType": "traceql",
+          "refId": "D",
+          "legendFormat": "Reasoning"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (span.model)",
+          "queryType": "traceql",
+          "refId": "E",
+          "legendFormat": "Total"
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "$A - $B",
+          "refId": "F",
+          "type": "math"
+        }
+      ],
+      "title": "Tokens by model",
+      "type": "timeseries",
+      "description": "Completed-turn tokens by model. Cached is included in input; reasoning is included in output; non-cached=input-cached."
+    },
+    {
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 30
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "legendFormat": "responses_websocket.stream_request",
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"run_sampling_request\" }) | { name = \"run_sampling_request\" } | avg_over_time(span:duration)",
+          "queryType": "traceql",
+          "refId": "A"
+        }
+      ],
+      "title": "Model sampling time",
+      "type": "timeseries",
+      "description": "run_sampling_request duration joined to the project by Trace ID."
+    },
+    {
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 38
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "legendFormat": "Model rounds / turn",
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"responses_websocket.stream_request\" }) | { name = \"responses_websocket.stream_request\" } | count_over_time()",
+          "queryType": "traceql",
+          "refId": "A",
+          "hide": true
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | count_over_time()",
+          "queryType": "traceql",
+          "refId": "B",
+          "hide": true
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "$A / $B",
+          "refId": "C",
+          "type": "math"
+        }
+      ],
+      "title": "Model rounds / turn",
+      "type": "timeseries",
+      "description": "WebSocket model rounds divided by completed turns, joined by Trace ID."
+    },
+    {
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 35,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 38
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "legendFormat": "Failures",
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" } | count_over_time()",
+          "queryType": "traceql",
+          "refId": "A"
+        }
+      ],
+      "title": "Tool failures over time",
+      "type": "timeseries",
+      "description": "Failed terminal top-level tool outcomes for the selected project."
+    },
+    {
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "description": "Trace-ID join: turn duration, run_sampling_request, terminal tool duration, and max(turn - sampling - tools, 0).",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Timestamp"
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Turn duration"
+              },
+              {
+                "id": "unit",
+                "value": "ns"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "model_sampling_ns"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Model sampling"
+              },
+              {
+                "id": "unit",
+                "value": "ns"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tool_execution_ns"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Tool execution"
+              },
+              {
+                "id": "unit",
+                "value": "ns"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other_overhead_ns"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Other overhead"
+              },
+              {
+                "id": "unit",
+                "value": "ns"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "traceIdHidden"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace ID"
+              },
               {
                 "id": "links",
                 "value": [
@@ -312,38 +1315,57 @@
           }
         ]
       },
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 10 },
-      "id": 7,
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 46
+      },
+      "id": 13,
       "options": {
         "cellHeight": "sm",
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Timestamp" }]
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Timestamp"
+          }
+        ]
       },
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
           "hide": true,
           "limit": 200,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) >> { name = \"responses_websocket.stream_request\" }",
-          "queryType": "traceqlSearch",
-          "refId": "B",
-          "spss": 100,
-          "tableType": "spans"
-        },
-        {
-          "datasource": { "type": "tempo", "uid": "tempo" },
-          "hide": true,
-          "limit": 200,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) | { name = \"session_task.turn\" } | select(span.model, span.\"codex.turn.reasoning_effort\", span.\"codex.turn.token_usage.input_tokens\", span.\"codex.turn.token_usage.output_tokens\", span.\"codex.turn.token_usage.reasoning_output_tokens\", span.\"codex.turn.token_usage.cached_input_tokens\")",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }",
           "queryType": "traceqlSearch",
           "refId": "A",
           "spss": 1,
           "tableType": "spans"
         },
         {
-          "datasource": { "type": "tempo", "uid": "tempo" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
           "hide": true,
-          "limit": 200,
+          "limit": 500,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"run_sampling_request\" }) | { name = \"run_sampling_request\" }",
+          "queryType": "traceqlSearch",
+          "refId": "B",
+          "spss": 100,
+          "tableType": "spans"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "hide": true,
+          "limit": 500,
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" }",
           "queryType": "traceqlSearch",
           "refId": "C",
@@ -351,19 +1373,12 @@
           "tableType": "spans"
         },
         {
-          "datasource": { "type": "tempo", "uid": "tempo" },
-          "hide": true,
-          "limit": 200,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { event.success = \"false\" }) | { event.success = \"false\" }",
-          "queryType": "traceqlSearch",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "WITH model AS (SELECT traceIdHidden AS trace_id, SUM(duration) AS model_sampling_ns FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden AS trace_id, SUM(duration) AS tool_execution_ns FROM C GROUP BY traceIdHidden) SELECT A.*, COALESCE(model.model_sampling_ns, 0) AS model_sampling_ns, COALESCE(tools.tool_execution_ns, 0) AS tool_execution_ns, CASE WHEN A.duration - COALESCE(model.model_sampling_ns, 0) - COALESCE(tools.tool_execution_ns, 0) > 0 THEN A.duration - COALESCE(model.model_sampling_ns, 0) - COALESCE(tools.tool_execution_ns, 0) ELSE 0 END AS other_overhead_ns FROM A LEFT JOIN model ON model.trace_id = A.traceIdHidden LEFT JOIN tools ON tools.trace_id = A.traceIdHidden ORDER BY A.time DESC",
           "refId": "D",
-          "spss": 100,
-          "tableType": "spans"
-        },
-        {
-          "datasource": { "type": "__expr__", "uid": "__expr__" },
-          "expression": "WITH rounds AS (SELECT traceIdHidden AS trace_id, COUNT(*) AS model_rounds FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden AS trace_id, COUNT(*) AS tool_calls FROM C GROUP BY traceIdHidden), failures AS (SELECT traceIdHidden AS trace_id, COUNT(*) AS failures FROM D GROUP BY traceIdHidden) SELECT A.*, '${cwd:regex}' AS cwd, COALESCE(rounds.model_rounds, 0) AS model_rounds, COALESCE(tools.tool_calls, 0) AS tool_calls, COALESCE(failures.failures, 0) AS failures FROM A LEFT JOIN rounds ON rounds.trace_id = A.traceIdHidden LEFT JOIN tools ON tools.trace_id = A.traceIdHidden LEFT JOIN failures ON failures.trace_id = A.traceIdHidden ORDER BY A.time DESC",
-          "refId": "E",
           "type": "sql"
         }
       ],
@@ -379,274 +1394,453 @@
             },
             "indexByName": {
               "time": 0,
-              "cwd": 1,
-              "model": 2,
-              "codex.turn.reasoning_effort": 3,
-              "duration": 4,
-              "codex.turn.token_usage.input_tokens": 5,
-              "codex.turn.token_usage.output_tokens": 6,
-              "codex.turn.token_usage.reasoning_output_tokens": 7,
-              "codex.turn.token_usage.cached_input_tokens": 8,
-              "model_rounds": 9,
-              "tool_calls": 10,
-              "failures": 11,
-              "traceIdHidden": 12
+              "duration": 1,
+              "tool_execution_ns": 3,
+              "other_overhead_ns": 4,
+              "traceIdHidden": 5,
+              "model_sampling_ns": 2
             },
             "renameByName": {}
           }
         }
       ],
-      "title": "Turns",
-      "type": "table"
-    },
-    {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 2,
-            "showPoints": "never"
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
-      "id": 8,
-      "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [
-        {
-          "datasource": { "type": "tempo", "uid": "tempo" },
-          "legendFormat": "{{span.model}}",
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) | { name = \"session_task.turn\" } | avg_over_time(span:duration) by (span.model)",
-          "queryType": "traceql",
-          "refId": "A"
-        }
-      ],
-      "title": "Duration by model",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 2,
-            "showPoints": "never"
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
-      "id": 9,
-      "options": {
-        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [
-        {
-          "datasource": { "type": "tempo", "uid": "tempo" },
-          "legendFormat": "{{span.model}}",
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) | { name = \"session_task.turn\" } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (span.model)",
-          "queryType": "traceql",
-          "refId": "A"
-        }
-      ],
-      "title": "Tokens by model",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 2,
-            "showPoints": "never"
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 30 },
-      "id": 10,
-      "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [
-        {
-          "datasource": { "type": "tempo", "uid": "tempo" },
-          "legendFormat": "responses_websocket.stream_request",
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) >> { name = \"responses_websocket.stream_request\" } | avg_over_time(span:duration)",
-          "queryType": "traceql",
-          "refId": "A"
-        }
-      ],
-      "title": "Model / network time",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 2,
-            "showPoints": "never"
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 38 },
-      "id": 11,
-      "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "single", "sort": "none" }
-      },
-      "targets": [
-        {
-          "datasource": { "type": "tempo", "uid": "tempo" },
-          "legendFormat": "Model rounds / turn",
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) >> { name = \"responses_websocket.stream_request\" } | count_over_time()",
-          "queryType": "traceql",
-          "refId": "A",
-          "hide": true
-        },
-        {
-          "datasource": { "type": "tempo", "uid": "tempo" },
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) | { name = \"session_task.turn\" } | count_over_time()",
-          "queryType": "traceql",
-          "refId": "B",
-          "hide": true
-        },
-        {
-          "datasource": { "type": "__expr__", "uid": "__expr__" },
-          "expression": "$A / $B",
-          "refId": "C",
-          "type": "math"
-        }
-      ],
-      "title": "Model rounds / turn",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "fixedColor": "red", "mode": "fixed" },
-          "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 35,
-            "lineWidth": 1,
-            "showPoints": "never"
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 38 },
-      "id": 12,
-      "options": {
-        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "single", "sort": "none" }
-      },
-      "targets": [
-        {
-          "datasource": { "type": "tempo", "uid": "tempo" },
-          "legendFormat": "Failures",
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { event.success = \"false\" }) | { event.success = \"false\" } | count_over_time()",
-          "queryType": "traceql",
-          "refId": "A"
-        }
-      ],
-      "title": "Tool failures over time",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "description": "Approximation from real child spans: model/network is responses_websocket.stream_request; tools are terminal-outcome tool spans; the remainder of the turn is overhead.",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "time" }, "properties": [{ "id": "displayName", "value": "Timestamp" }, { "id": "unit", "value": "dateTimeAsIso" }] },
-          { "matcher": { "id": "byName", "options": "duration" }, "properties": [{ "id": "displayName", "value": "Turn duration" }, { "id": "unit", "value": "ns" }] },
-          { "matcher": { "id": "byName", "options": "model_network_ns" }, "properties": [{ "id": "displayName", "value": "Model / network" }, { "id": "unit", "value": "ns" }] },
-          { "matcher": { "id": "byName", "options": "tool_execution_ns" }, "properties": [{ "id": "displayName", "value": "Tool execution" }, { "id": "unit", "value": "ns" }] },
-          { "matcher": { "id": "byName", "options": "other_overhead_ns" }, "properties": [{ "id": "displayName", "value": "Other overhead" }, { "id": "unit", "value": "ns" }] },
-          { "matcher": { "id": "byName", "options": "traceIdHidden" }, "properties": [{ "id": "displayName", "value": "Trace ID" }, { "id": "links", "value": [{ "internal": { "datasourceName": "Tempo", "datasourceUid": "tempo", "query": { "query": "${__value.raw}", "queryType": "traceql" } }, "title": "Open trace in Tempo" }] }] }
-        ]
-      },
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 46 },
-      "id": 13,
-      "options": { "cellHeight": "sm", "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Timestamp" }] },
-      "targets": [
-        { "datasource": { "type": "tempo", "uid": "tempo" }, "hide": true, "limit": 200, "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) | { name = \"session_task.turn\" }", "queryType": "traceqlSearch", "refId": "A", "spss": 1, "tableType": "spans" },
-        { "datasource": { "type": "tempo", "uid": "tempo" }, "hide": true, "limit": 500, "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) >> { name = \"responses_websocket.stream_request\" }", "queryType": "traceqlSearch", "refId": "B", "spss": 100, "tableType": "spans" },
-        { "datasource": { "type": "tempo", "uid": "tempo" }, "hide": true, "limit": 500, "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" }) >> { name = \"dispatch_tool_call_with_terminal_outcome\" }", "queryType": "traceqlSearch", "refId": "C", "spss": 100, "tableType": "spans" },
-        { "datasource": { "type": "__expr__", "uid": "__expr__" }, "expression": "WITH model AS (SELECT traceIdHidden AS trace_id, SUM(duration) AS model_network_ns FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden AS trace_id, SUM(duration) AS tool_execution_ns FROM C GROUP BY traceIdHidden) SELECT A.*, COALESCE(model.model_network_ns, 0) AS model_network_ns, COALESCE(tools.tool_execution_ns, 0) AS tool_execution_ns, CASE WHEN A.duration - COALESCE(model.model_network_ns, 0) - COALESCE(tools.tool_execution_ns, 0) > 0 THEN A.duration - COALESCE(model.model_network_ns, 0) - COALESCE(tools.tool_execution_ns, 0) ELSE 0 END AS other_overhead_ns FROM A LEFT JOIN model ON model.trace_id = A.traceIdHidden LEFT JOIN tools ON tools.trace_id = A.traceIdHidden ORDER BY A.time DESC", "refId": "D", "type": "sql" }
-      ],
-      "transformations": [{ "id": "organize", "options": { "excludeByName": { "name": true, "spanID": true, "traceName": true, "traceService": true }, "indexByName": { "time": 0, "duration": 1, "model_network_ns": 2, "tool_execution_ns": 3, "other_overhead_ns": 4, "traceIdHidden": 5 }, "renameByName": {} } }],
       "title": "Turn time breakdown (approx.)",
       "type": "table"
     },
     {
-      "datasource": { "type": "loki", "uid": "loki" },
-      "description": "Structured Loki metadata. These events have no cwd field, so use the Tempo link to inspect the scoped trace.",
-      "fieldConfig": { "defaults": {}, "overrides": [
-        { "matcher": { "id": "byName", "options": "Time" }, "properties": [{ "id": "displayName", "value": "Time" }, { "id": "unit", "value": "dateTimeAsIso" }] },
-        { "matcher": { "id": "byName", "options": "model" }, "properties": [{ "id": "displayName", "value": "Model" }] },
-        { "matcher": { "id": "byName", "options": "duration_ms" }, "properties": [{ "id": "displayName", "value": "Duration" }, { "id": "unit", "value": "ms" }] },
-        { "matcher": { "id": "byName", "options": "tool_name" }, "properties": [{ "id": "displayName", "value": "Tool" }] },
-        { "matcher": { "id": "byName", "options": "call_id" }, "properties": [{ "id": "displayName", "value": "Call ID" }] },
-        { "matcher": { "id": "byName", "options": "output" }, "properties": [{ "id": "displayName", "value": "Error/output" }, { "id": "custom.width", "value": 520 }] },
-        { "matcher": { "id": "byName", "options": "trace_id" }, "properties": [{ "id": "displayName", "value": "Trace ID" }, { "id": "links", "value": [{ "internal": { "datasourceName": "Tempo", "datasourceUid": "tempo", "query": { "query": "${__value.raw}", "queryType": "traceql" } }, "title": "Open trace in Tempo" }] }] }
-      ] },
-      "gridPos": { "h": 13, "w": 24, "x": 0, "y": 58 },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "description": "Project-scoped terminal failures. Raw arguments/output are intentionally absent; bounded failure class and reason remain with a Trace ID link.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Time"
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tool_name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Tool"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failure_class"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failure class"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "reason_summary"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Bounded reason"
+              },
+              {
+                "id": "custom.width",
+                "value": 360
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Duration"
+              },
+              {
+                "id": "unit",
+                "value": "ns"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "traceIdHidden"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace ID"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "internal": {
+                      "datasourceName": "Tempo",
+                      "datasourceUid": "tempo",
+                      "query": {
+                        "query": "${__value.raw}",
+                        "queryType": "traceql"
+                      }
+                    },
+                    "title": "Open trace in Tempo"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 24,
+        "x": 0,
+        "y": 58
+      },
       "id": 14,
-      "options": { "cellHeight": "sm", "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Time" }] },
-      "targets": [{ "datasource": { "type": "loki", "uid": "loki" }, "direction": "backward", "expr": "{service_name=\"codex-app-server\"} | success=\"false\" | line_format \"{{.model}}\\u001f{{.tool_name}}\\u001f{{.duration_ms}}\\u001f{{.call_id}}\\u001f{{.output}}\\u001f{{.trace_id}}\"", "queryType": "range", "refId": "A" }],
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Time"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "hide": false,
+          "limit": 500,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" } | select(span.tool_name, span.\"codex.tool.name\", span.call_id, span.\"codex.tool.call_id\", span.nested, span.retry_count, span.recovered, span.failure_class, span.reason_summary, span.\"error.kind\")",
+          "queryType": "traceqlSearch",
+          "refId": "A",
+          "spss": 100,
+          "tableType": "spans"
+        }
+      ],
       "transformations": [
-        { "id": "extractFields", "options": { "source": "Line", "format": "regexp", "regexp": "^(?<model>[^\\u001f]*)\\u001f(?<tool_name>[^\\u001f]*)\\u001f(?<duration_ms>[^\\u001f]*)\\u001f(?<call_id>[^\\u001f]*)\\u001f(?<output>.*)\\u001f(?<trace_id>[a-f0-9]{32})$" } },
-        { "id": "organize", "options": { "excludeByName": { "Line": true, "labels": true, "tsNs": true, "labelTypes": true, "id": true }, "indexByName": { "Time": 0, "model": 1, "tool_name": 2, "duration_ms": 3, "call_id": 4, "output": 5, "trace_id": 6 }, "renameByName": {} } }
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "name": true,
+              "spanID": true,
+              "traceName": true,
+              "traceService": true
+            },
+            "indexByName": {
+              "time": 0,
+              "tool_name": 1,
+              "failure_class": 2,
+              "reason_summary": 3,
+              "retry_count": 4,
+              "recovered": 5,
+              "nested": 6,
+              "duration": 7,
+              "call_id": 8,
+              "traceIdHidden": 9
+            },
+            "renameByName": {}
+          }
+        }
       ],
       "title": "Failed tool calls",
       "type": "table"
     },
     {
-      "datasource": { "type": "loki", "uid": "loki" },
-      "description": "The slowest recent tool-result records, ordered by the structured duration_ms metadata.",
-      "fieldConfig": { "defaults": {}, "overrides": [
-        { "matcher": { "id": "byName", "options": "duration_ms" }, "properties": [{ "id": "displayName", "value": "Duration" }, { "id": "unit", "value": "ms" }] },
-        { "matcher": { "id": "byName", "options": "tool_name" }, "properties": [{ "id": "displayName", "value": "Tool" }] },
-        { "matcher": { "id": "byName", "options": "trace_id" }, "properties": [{ "id": "displayName", "value": "Trace ID" }, { "id": "links", "value": [{ "internal": { "datasourceName": "Tempo", "datasourceUid": "tempo", "query": { "query": "${__value.raw}", "queryType": "traceql" } }, "title": "Open trace in Tempo" }] }] }
-      ] },
-      "gridPos": { "h": 13, "w": 24, "x": 0, "y": 71 },
+      "id": 18,
+      "type": "timeseries",
+      "title": "Tool calls / failures by tool",
+      "description": "Terminal top-level outcomes grouped by bounded tool name and scoped to the selected project.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 84
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "legendFormat": "Calls",
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | count_over_time() by (span.tool_name)",
+          "queryType": "traceql",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "legendFormat": "Failures",
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" } | count_over_time() by (span.tool_name)",
+          "queryType": "traceql",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Tool latency by tool",
+      "description": "p50, p95, and max duration for terminal calls. Use Slowest tool calls below for a Trace ID link.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 84
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ns"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "legendFormat": "p50",
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | quantile_over_time(span:duration, .50) by (span.tool_name)",
+          "queryType": "traceql",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "legendFormat": "p95",
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | quantile_over_time(span:duration, .95) by (span.tool_name)",
+          "queryType": "traceql",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "legendFormat": "max",
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | max_over_time(span:duration) by (span.tool_name)",
+          "queryType": "traceql",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "description": "Project-scoped terminal calls ordered by duration. Raw arguments/output are not selected; Trace ID opens the bounded trace view.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tool_name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Tool"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Duration"
+              },
+              {
+                "id": "unit",
+                "value": "ns"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "traceIdHidden"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace ID"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "internal": {
+                      "datasourceName": "Tempo",
+                      "datasourceUid": "tempo",
+                      "query": {
+                        "query": "${__value.raw}",
+                        "queryType": "traceql"
+                      }
+                    },
+                    "title": "Open trace in Tempo"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 24,
+        "x": 0,
+        "y": 92
+      },
       "id": 15,
-      "options": { "cellHeight": "sm", "showHeader": true },
-      "targets": [{ "datasource": { "type": "loki", "uid": "loki" }, "direction": "backward", "expr": "{service_name=\"codex-app-server\", event_name=\"codex.tool_result\"}", "queryType": "range", "refId": "A" }],
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "hide": false,
+          "limit": 500,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | select(span.tool_name, span.\"codex.tool.name\", span.call_id, span.\"codex.tool.call_id\", span.nested, event.success)",
+          "queryType": "traceqlSearch",
+          "refId": "A",
+          "spss": 100,
+          "tableType": "spans"
+        }
+      ],
       "transformations": [
-        { "id": "labelsToFields", "options": { "keepLabels": [] } },
-        { "id": "organize", "options": { "excludeByName": { "Line": true, "labels": true }, "indexByName": { "tool_name": 0, "duration_ms": 1, "success": 2, "trace_id": 3 }, "renameByName": {} } },
-        { "id": "sortBy", "options": { "fields": {}, "sort": [{ "field": "duration_ms", "desc": true }] } },
-        { "id": "limit", "options": { "limitField": 20 } }
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "name": true,
+              "traceName": true,
+              "traceService": true
+            },
+            "indexByName": {
+              "tool_name": 0,
+              "duration": 1,
+              "success": 2,
+              "call_id": 3,
+              "traceIdHidden": 4
+            },
+            "renameByName": {}
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "duration",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "limit",
+          "options": {
+            "limitField": 20
+          }
+        }
       ],
       "title": "Slowest tool calls",
       "type": "table"

@@ -1,0 +1,100 @@
+{
+  "results": {
+    "A": {
+      "status": 200,
+      "frames": [{
+        "schema": {"fields": [
+          {"name":"time"},{"name":"duration"},{"name":"traceIdHidden"},{"name":"model"},{"name":"codex.turn.reasoning_effort"},
+          {"name":"codex.turn.token_usage.input_tokens"},{"name":"codex.turn.token_usage.cached_input_tokens"},
+          {"name":"codex.turn.token_usage.output_tokens"},{"name":"codex.turn.token_usage.reasoning_output_tokens"},
+          {"name":"codex.turn.token_usage.total_tokens"}
+        ]},
+        "data": {"values": [
+          [1788508200000,1788508100000,1788508500000],
+          [10000000000,9000000000,5000000000],
+          ["trace-complete","trace-complete","trace-incomplete"],
+          ["gpt-test","gpt-old","gpt-test"],
+          ["high","medium","high"],
+          [100,90,null],
+          [40,30,null],
+          [20,18,null],
+          [5,4,null],
+          [120,108,null]
+        ]}
+      }]
+    },
+    "B": {
+      "status": 206,
+      "partial": true,
+      "frames": [{
+        "schema": {"fields": [{"name":"time"},{"name":"traceIdHidden"},{"name":"cwd"}]},
+        "data": {"values": [
+          [1788508200000,1788508500000,1788508770000,1788508200000],
+          ["trace-complete","trace-incomplete","trace-active","trace-missing"],
+          ["fixture://project","fixture://project","fixture://project","fixture://project"]
+        ]}
+      }]
+    },
+    "C": {
+      "status": 200,
+      "frames": [{
+        "schema": {"fields": [
+          {"name":"time"},{"name":"duration"},{"name":"traceIdHidden"},{"name":"spanID"},{"name":"tool_name"},{"name":"call_id"},{"name":"nested"}
+        ]},
+        "data": {"values": [
+          [1788508210000,1788508209000,1788508220000,1788508230000],
+          [2000000000,1500000000,1000000000,3000000000],
+          ["trace-complete","trace-complete","trace-complete","trace-complete"],
+          ["span-c1-new","span-c1-old","span-c2","span-c3"],
+          ["shell","shell","read","read"],
+          ["call-1","call-1","call-2","call-3"],
+          [false,false,true,false]
+        ]}
+      }]
+    },
+    "D": {
+      "status": 200,
+      "frames": [{
+        "schema": {"fields": [
+          {"name":"time"},{"name":"duration"},{"name":"traceIdHidden"},{"name":"spanID"},{"name":"tool_name"},{"name":"call_id"},
+          {"name":"nested"},{"name":"failure_class"},{"name":"reason_summary"},{"name":"retry_count"},{"name":"recovered"}
+        ]},
+        "data": {"values": [
+          [1788508210000,1788508220000],
+          [2000000000,1000000000],
+          ["trace-complete","trace-complete"],
+          ["span-c1-new","span-c2"],
+          ["shell","read"],
+          ["call-1","call-2"],
+          [false,true],
+          ["tool_error","tool_error"],
+          ["exit code 1","nested implementation failure"],
+          [1,0],
+          [false,false]
+        ]}
+      }]
+    },
+    "R": {
+      "status": 200,
+      "frames": [{
+        "schema": {"fields": [{"name":"time"},{"name":"duration"},{"name":"traceIdHidden"}]},
+        "data": {"values": [
+          [1788508205000,1788508215000],
+          [2000000000,2000000000],
+          ["trace-complete","trace-complete"]
+        ]}
+      }]
+    },
+    "S": {
+      "status": 200,
+      "frames": [{
+        "schema": {"fields": [{"name":"time"},{"name":"duration"},{"name":"traceIdHidden"}]},
+        "data": {"values": [
+          [1788508204000],
+          [4000000000],
+          ["trace-complete"]
+        ]}
+      }]
+    }
+  }
+}

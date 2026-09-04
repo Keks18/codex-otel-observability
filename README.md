@@ -1,6 +1,6 @@
 # Codex OTEL Observability
 
-Unofficial, local-first observability kit for Codex. It collects Codex OpenTelemetry data through a dedicated OpenTelemetry Collector and shows turns, tokens, cache usage, model sampling, tool calls, failures, and Tempo traces in Grafana.
+Unofficial, local-first observability kit for Codex. It collects Codex OpenTelemetry data through a dedicated OpenTelemetry Collector and shows completed/active coverage, tokens, cache usage, model sampling, tool calls, failures, and Tempo traces in Grafana.
 
 This repository is intended for developer workstations and small local experiments. It is not a production or shared-team observability platform.
 
@@ -13,8 +13,14 @@ Codex -> OTLP/HTTP 127.0.0.1:4318 -> OTEL Collector -> Grafana LGTM
 
 The two containers are managed as one Docker Compose project:
 
-- `codex-otel-collector` receives and forwards logs, metrics, and traces.
+- `codex-otel-collector` receives all OTLP signals, drops log records for privacy,
+  and forwards metrics and traces.
 - `codex-otel-lgtm` provides Grafana, Loki, Tempo, and the supporting local backends.
+
+For privacy, the Collector drops log records before export because the pinned
+build cannot sanitize arbitrary log bodies. Dashboard and report diagnostics use
+bounded trace attributes and never render raw prompts, tool arguments, or output.
+The formulas and completeness rules are defined in [METRIC_CONTRACT.md](METRIC_CONTRACT.md).
 
 ## Requirements
 
@@ -34,6 +40,8 @@ The two containers are managed as one Docker Compose project:
 
 3. Merge the relevant settings from [examples/codex-config.toml](examples/codex-config.toml) into the user-level Codex config and restart Codex. Do not put OTEL routing in a project-level `.codex/config.toml`.
 4. Open `http://127.0.0.1:3000` and select **Codex / Codex Overview**.
+5. Enter the exact project path in the **Project cwd** textbox. Select an absolute
+   Grafana time range when you need a stable `as_of` snapshot.
 
 The example keeps raw user prompts disabled. It does not edit your Codex configuration automatically.
 
@@ -42,14 +50,25 @@ The example keeps raw user prompts disabled. It does not edit your Codex configu
 ```powershell
 .\scripts\codex-performance-report.ps1 -Project 'D:\your-project' -Period '6h' -Format json
 .\scripts\codex-performance-report.ps1 -Project 'D:\your-project' -Period '24h' -Format markdown
+.\scripts\codex-performance-report.ps1 -Project 'D:\your-project' -Period '6h' -AsOf '2026-09-04T08:00:00Z' -Format json
 ```
 
-The report queries the local Grafana datasources and does not upload results.
+The report captures one UTC `as_of`, uses absolute query bounds, and does not
+upload results. JSON schema `2.0` includes completed/active/incomplete coverage,
+token semantics, per-model and per-tool breakdowns, bounded failures, and Trace IDs.
 
-## Current v0.1 limitations
+Run the synthetic regression fixture with:
 
-- Failure and nested tool-call deduplication is not final; treat those counts as diagnostic rather than billing-grade.
-- Active turns and incomplete/oversized traces can affect short time ranges.
+```powershell
+.\scripts\test-codex-performance-report.ps1
+```
+
+## Current v0.2 limitations
+
+- Active turns are inferred from recently exported scoped activity; a truly
+  in-flight span is not visible until its exporter emits data.
+- Tempo search is limit-bound. Partial/oversized results are warnings, not proof
+  that all upstream trace data was returned.
 - The dashboard depends on the telemetry schema emitted by the installed Codex version.
 
 ## Existing local installation
