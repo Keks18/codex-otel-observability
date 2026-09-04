@@ -15,19 +15,30 @@
     "list": [
       {
         "current": {
-          "text": "",
+          "isNone": true,
+          "text": "⚠ Project not selected",
           "value": ""
+        },
+        "datasource": {
+          "type": "tempo",
+          "uid": "tempo"
         },
         "definition": "",
         "includeAll": false,
         "label": "Project cwd",
+        "multi": false,
         "name": "cwd",
         "options": [],
-        "query": "",
-        "refresh": 0,
+        "query": {
+          "label": "cwd",
+          "refId": "TempoDatasourceVariableQueryEditor-VariableQuery",
+          "type": 1
+        },
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "type": "textbox"
+        "sort": 1,
+        "type": "query"
       }
     ]
   },
@@ -38,7 +49,7 @@
   "timezone": "browser",
   "title": "Codex Overview",
   "uid": "codex-overview",
-  "version": 17,
+  "version": 18,
   "panels": [
     {
       "datasource": {
@@ -47,6 +58,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "noValue": "—",
           "unit": "short"
         },
         "overrides": []
@@ -95,6 +107,7 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 1,
+          "noValue": "—",
           "unit": "s"
         },
         "overrides": []
@@ -142,6 +155,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "noValue": "—",
           "unit": "short"
         },
         "overrides": []
@@ -190,6 +204,7 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 1,
+          "noValue": "—",
           "unit": "percent"
         },
         "overrides": []
@@ -286,6 +301,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "noValue": "—",
           "unit": "short"
         },
         "overrides": []
@@ -337,6 +353,7 @@
             "fixedColor": "red",
             "mode": "fixed"
           },
+          "noValue": "—",
           "unit": "short"
         },
         "overrides": []
@@ -389,7 +406,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Project:** `${cwd:regex}`  \n**from:** `${__from:date:iso}`  \n**as_of:** `${__to:date:iso}`\n\nKPI include completed turns only. For a repeatable snapshot, select an **absolute** dashboard time range; auto-refresh remains 10s but the bounds do not move."
+        "content": "## ${cwd:text}\n\n**from:** `${__from:date:iso}`  \n**as_of:** `${__to:date:iso}`\n\nKPI include completed turns only and stay unset while no project is selected. For a repeatable snapshot, select an **absolute** dashboard time range; auto-refresh remains 10s but the bounds do not move."
       }
     },
     {
@@ -409,7 +426,8 @@
       },
       "fieldConfig": {
         "defaults": {
-          "decimals": 0
+          "decimals": 0,
+          "noValue": "—"
         },
         "overrides": []
       },

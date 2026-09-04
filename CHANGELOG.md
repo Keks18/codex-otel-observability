@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- `Project cwd` now discovers exact `span.cwd` values from Tempo, auto-selects an
+  available project, and keeps the multi-project dropdown.
+- Empty Tempo starts with an explicit `Project not selected` state; KPI remain
+  unset instead of presenting zero as measured project data.
+
 ## [0.2.0] - 2026-09-04
 
 ### Added

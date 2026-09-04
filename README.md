@@ -40,8 +40,10 @@ The formulas and completeness rules are defined in [METRIC_CONTRACT.md](METRIC_C
 
 3. Merge the relevant settings from [examples/codex-config.toml](examples/codex-config.toml) into the user-level Codex config and restart Codex. Do not put OTEL routing in a project-level `.codex/config.toml`.
 4. Open `http://127.0.0.1:3000` and select **Codex / Codex Overview**.
-5. Enter the exact project path in the **Project cwd** textbox. Select an absolute
-   Grafana time range when you need a stable `as_of` snapshot.
+5. Select **Project cwd**. Grafana discovers the exact `span.cwd` values stored in
+   Tempo, automatically selects the first available project, and provides a list
+   when more than one exists. Select an absolute Grafana time range when you need
+   a stable `as_of` snapshot.
 
 The example keeps raw user prompts disabled. It does not edit your Codex configuration automatically.
 
@@ -65,6 +67,8 @@ Run the synthetic regression fixture with:
 
 ## Current v0.2 limitations
 
+- When Tempo has no `span.cwd` values, the dashboard leaves KPI unset and shows
+  `Project not selected` until a project becomes available.
 - Active turns are inferred from recently exported scoped activity; a truly
   in-flight span is not visible until its exporter emits data.
 - Tempo search is limit-bound. Partial/oversized results are warnings, not proof
