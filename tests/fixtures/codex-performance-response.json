@@ -39,7 +39,7 @@
       "status": 200,
       "frames": [{
         "schema": {"fields": [
-          {"name":"time"},{"name":"duration"},{"name":"traceIdHidden"},{"name":"spanID"},{"name":"tool_name"},{"name":"call_id"},{"name":"nested"}
+          {"name":"time"},{"name":"duration"},{"name":"traceIdHidden"},{"name":"spanID"},{"name":"event.tool_name"},{"name":"call_id"},{"name":"nested"}
         ]},
         "data": {"values": [
           [1788508210000,1788508209000,1788508220000,1788508230000],
@@ -56,7 +56,7 @@
       "status": 200,
       "frames": [{
         "schema": {"fields": [
-          {"name":"time"},{"name":"duration"},{"name":"traceIdHidden"},{"name":"spanID"},{"name":"tool_name"},{"name":"call_id"},
+          {"name":"time"},{"name":"duration"},{"name":"traceIdHidden"},{"name":"spanID"},{"name":"event.tool_name"},{"name":"call_id"},
           {"name":"nested"},{"name":"failure_class"},{"name":"reason_summary"},{"name":"retry_count"},{"name":"recovered"}
         ]},
         "data": {"values": [

@@ -65,6 +65,11 @@ Tool analytics are grouped by tool name and report `calls`, `failures`, `p50`,
 `p95`, and `max` duration. Successful latency and failed-call counts stay
 separate so a fast failure cannot appear as healthy performance.
 
+The tool name is the span event attribute `event.tool_name`. Dashboard queries
+select and group by that scope. The report prefers `event.tool_name`, with
+legacy `tool_name`, `span.tool_name`, `codex.tool.name`, and
+`span.codex.tool.name` columns as fallbacks; missing names remain `unknown`.
+
 ## Coverage warnings
 
 The dashboard and report must surface, rather than silently discard:

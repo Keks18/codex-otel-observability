@@ -1463,7 +1463,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "tool_name"
+              "options": "event.tool_name"
             },
             "properties": [
               {
@@ -1571,7 +1571,7 @@
           },
           "hide": false,
           "limit": 500,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" } | select(span.tool_name, span.\"codex.tool.name\", span.call_id, span.\"codex.tool.call_id\", span.nested, span.retry_count, span.recovered, span.failure_class, span.reason_summary, span.\"error.kind\")",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" } | select(event.tool_name, span.call_id, span.\"codex.tool.call_id\", span.nested, span.retry_count, span.recovered, span.failure_class, span.reason_summary, span.\"error.kind\")",
           "queryType": "traceqlSearch",
           "refId": "A",
           "spss": 100,
@@ -1590,7 +1590,7 @@
             },
             "indexByName": {
               "time": 0,
-              "tool_name": 1,
+              "event.tool_name": 1,
               "failure_class": 2,
               "reason_summary": 3,
               "retry_count": 4,
@@ -1650,7 +1650,7 @@
           },
           "legendFormat": "Calls",
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | count_over_time() by (span.tool_name)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | count_over_time() by (event.tool_name)",
           "queryType": "traceql",
           "refId": "A"
         },
@@ -1661,7 +1661,7 @@
           },
           "legendFormat": "Failures",
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" } | count_over_time() by (span.tool_name)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" } | count_over_time() by (event.tool_name)",
           "queryType": "traceql",
           "refId": "B"
         }
@@ -1711,7 +1711,7 @@
           },
           "legendFormat": "p50",
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | quantile_over_time(span:duration, .50) by (span.tool_name)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | quantile_over_time(span:duration, .50) by (event.tool_name)",
           "queryType": "traceql",
           "refId": "A"
         },
@@ -1722,7 +1722,7 @@
           },
           "legendFormat": "p95",
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | quantile_over_time(span:duration, .95) by (span.tool_name)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | quantile_over_time(span:duration, .95) by (event.tool_name)",
           "queryType": "traceql",
           "refId": "B"
         },
@@ -1733,7 +1733,7 @@
           },
           "legendFormat": "max",
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | max_over_time(span:duration) by (span.tool_name)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | max_over_time(span:duration) by (event.tool_name)",
           "queryType": "traceql",
           "refId": "C"
         }
@@ -1751,7 +1751,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "tool_name"
+              "options": "event.tool_name"
             },
             "properties": [
               {
@@ -1825,7 +1825,7 @@
           },
           "hide": false,
           "limit": 500,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | select(span.tool_name, span.\"codex.tool.name\", span.call_id, span.\"codex.tool.call_id\", span.nested, event.success)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | select(event.tool_name, span.call_id, span.\"codex.tool.call_id\", span.nested, event.success)",
           "queryType": "traceqlSearch",
           "refId": "A",
           "spss": 100,
@@ -1842,7 +1842,7 @@
               "traceService": true
             },
             "indexByName": {
-              "tool_name": 0,
+              "event.tool_name": 0,
               "duration": 1,
               "success": 2,
               "call_id": 3,

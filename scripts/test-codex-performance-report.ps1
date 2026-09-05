@@ -38,6 +38,44 @@ Assert-Equal $json1.tools.byName[0].maxDurationMs 3000 'slowest duration'
 Assert-Equal $json1.tools.failedCalls[0].failureClass 'tool_error' 'failure class'
 Assert-Equal $json1.tools.failedCalls[0].nested $false 'nested exclusion'
 Assert-Equal $json1.tools.failedCalls[0].retryCount 1 'retry count'
+Assert-Equal $json1.tools.failedCalls[0].tool 'shell' 'event tool name on failed call'
+
+function Test-ToolNameSource([string]$Source) {
+    $response = Get-Content -Raw $fixture | ConvertFrom-Json
+    foreach ($ref in @('C','D')) {
+        $frame = $response.results.$ref.frames[0]
+        $field = @($frame.schema.fields | Where-Object name -eq 'event.tool_name')[0]
+        $field.name = $Source
+        if ($Source -eq 'event.tool_name') {
+            # A conflicting legacy name must not override the event attribute.
+            $frame.schema.fields += [pscustomobject]@{name='tool_name'}
+            $frame.data.values += ,@($frame.data.values[0] | ForEach-Object { 'legacy-wrong' })
+        } else {
+            # An absent/empty event value must still allow legacy fixtures.
+            $frame.schema.fields += [pscustomobject]@{name='event.tool_name'}
+            $frame.data.values += ,@($frame.data.values[0] | ForEach-Object { '' })
+        }
+    }
+    # Exercise query construction without writing fixtures or contacting Grafana.
+    function Invoke-RestMethod($Uri, $Method, $ContentType, $Body) {
+        $request = $Body | ConvertFrom-Json
+        foreach ($query in @($request.queries | Where-Object refId -in @('C','D'))) {
+            if ($query.query -notmatch 'select\(event\.tool_name,') { throw 'Tool query does not select event.tool_name first.' }
+        }
+        return $response
+    }
+    $actual = & $reportScript -Project 'fixture://project' -Period 1h -AsOf $asOf -Format json | ConvertFrom-Json
+    if ($Source -eq 'missing-name') {
+        Assert-Equal $actual.tools.byName.Count 1 'missing names group together'
+        Assert-Equal $actual.tools.byName[0].tool 'unknown' 'missing name fallback'
+        Assert-Equal $actual.tools.failedCalls[0].tool 'unknown' 'missing failed tool name'
+    } else {
+        Assert-Equal ($actual.tools | ConvertTo-Json -Depth 10) ($json1.tools | ConvertTo-Json -Depth 10) "tool source $Source"
+    }
+}
+foreach ($source in @('event.tool_name','tool_name','span.tool_name','codex.tool.name','span.codex.tool.name','missing-name')) {
+    Test-ToolNameSource $source
+}
 
 $warningCodes = @($json1.coverage.warnings | ForEach-Object code)
 foreach ($code in @('oversized_or_partial','duplicate_turn_span','active_turn','incomplete_turn','missing_turn_or_root','duplicate_tool_call')) {

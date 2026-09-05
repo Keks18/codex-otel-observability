@@ -124,6 +124,18 @@ $latencyText = (@($latency.targets | ForEach-Object query) -join ' ')
 Assert-True ($latencyText -match 'quantile_over_time\(span:duration, \.50\)' -and $latencyText -match 'quantile_over_time\(span:duration, \.95\)' -and $latencyText -match 'max_over_time\(span:duration\)') 'Tool latency quantiles drifted.'
 
 $linkCount = ([regex]::Matches($raw, 'Open trace in Tempo')).Count
+$toolPanels = @($dashboard.panels | Where-Object id -in @(14,15,18,19))
+foreach ($panel in $toolPanels) {
+    foreach ($target in $panel.targets) {
+        Assert-True ($target.query -match 'event\.tool_name' -and $target.query -notmatch 'span\.tool_name') "Tool panel $($panel.id) must use the event-scoped tool name."
+    }
+    if ($panel.type -eq 'table') {
+        Assert-True (@($panel.fieldConfig.overrides | Where-Object { $_.matcher.options -eq 'event.tool_name' }).Count -eq 1) "Tool panel $($panel.id) must format the event.tool_name column."
+        $organize = @($panel.transformations | Where-Object id -eq 'organize')[0]
+        Assert-True ($null -ne $organize.options.indexByName.PSObject.Properties['event.tool_name']) "Tool panel $($panel.id) must position the event.tool_name column."
+    }
+}
+
 Assert-True ($linkCount -ge 3) 'Required Trace ID links are missing.'
 
 'codex dashboard contract regression: PASS'

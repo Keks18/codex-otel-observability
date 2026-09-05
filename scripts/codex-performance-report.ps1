@@ -107,7 +107,7 @@ $projectLiteral = ConvertTo-TraceQlString $Project
 $projectSet = '{ span.cwd = ' + $projectLiteral + ' }'
 $tempo = @{ type = 'tempo'; uid = 'tempo' }
 $terminal = 'dispatch_tool_call_with_terminal_outcome'
-$selectTools = 'select(span.tool_name, span."codex.tool.name", span.call_id, span."codex.tool.call_id", span.nested, span.retry_count, span.recovered, event.success, span.failure_class, span.reason_summary, span."error.kind")'
+$selectTools = 'select(event.tool_name, span.tool_name, span."codex.tool.name", span.call_id, span."codex.tool.call_id", span.nested, span.retry_count, span.recovered, event.success, span.failure_class, span.reason_summary, span."error.kind")'
 $queries = @(
     @{ refId='A'; datasource=$tempo; queryType='traceqlSearch'; tableType='spans'; limit=$MaxTurns; spss=1; query='(' + $projectSet + ' && { name = "session_task.turn" }) | { name = "session_task.turn" } | select(span.model, span."codex.turn.reasoning_effort", span."codex.turn.token_usage.input_tokens", span."codex.turn.token_usage.output_tokens", span."codex.turn.token_usage.reasoning_output_tokens", span."codex.turn.token_usage.cached_input_tokens", span."codex.turn.token_usage.total_tokens")' },
     @{ refId='B'; datasource=$tempo; queryType='traceqlSearch'; tableType='spans'; limit=$MaxTurns; spss=20; query=$projectSet + ' | select(span.cwd)' },
@@ -254,7 +254,7 @@ foreach ($key in @($failures.Keys | Where-Object { $toolCalls.ContainsKey($_) })
     $reason=[string](Get-Value $f @('reason_summary','failure_class','error.kind') 'No bounded reason was exported')
     if($reason.Length -gt 160){$reason=$reason.Substring(0,160)}
     $failedCalls += [pscustomobject][ordered]@{
-        tool=[string](Get-Value $t @('tool_name','codex.tool.name') 'unknown')
+        tool=[string](Get-Value $t @('event.tool_name','tool_name','span.tool_name','codex.tool.name','span.codex.tool.name') 'unknown')
         failureClass=[string](Get-Value $f @('failure_class','error.kind') 'unknown')
         reasonSummary=$reason.Replace([char]13,' ').Replace([char]10,' ')
         nested=$false
@@ -267,7 +267,7 @@ foreach ($key in @($failures.Keys | Where-Object { $toolCalls.ContainsKey($_) })
 }
 
 $toolsByName = @()
-foreach ($group in @($toolCalls.GetEnumerator() | Group-Object { [string](Get-Value $_.Value @('tool_name','codex.tool.name') 'unknown') })) {
+foreach ($group in @($toolCalls.GetEnumerator() | Group-Object { [string](Get-Value $_.Value @('event.tool_name','tool_name','span.tool_name','codex.tool.name','span.codex.tool.name') 'unknown') })) {
     $durations=[double[]]@($group.Group|ForEach-Object{Get-DurationMs $_.Value})
     $failureCount=@($group.Group|Where-Object{$failures.ContainsKey($_.Key)}).Count
     $slowest=$group.Group|Sort-Object{Get-DurationMs $_.Value}-Descending|Select-Object -First 1
