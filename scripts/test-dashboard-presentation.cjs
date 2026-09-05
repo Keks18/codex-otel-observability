@@ -48,3 +48,16 @@ for (const panel of dashboard.panels.filter(p => ['stat', 'timeseries'].includes
   }
 }
 console.log(`Dashboard display names: ${count} synthetic series PASS`);
+
+for (const id of [6, 12]) {
+  const panel = dashboard.panels.find(p => p.id === id);
+  const field = { name: 'failures', type: 'number', config: panel.fieldConfig.defaults, values: [] };
+  const display = g.getDisplayProcessor({ field, theme });
+  for (const value of [0, 1, 5]) {
+    assert.equal(display(value).color, theme.visualization.getColorByName(value === 0 ? 'green' : 'red'), `Failure panel ${id}: ${value}`);
+  }
+  assert.equal(display(null).text, '—', 'Missing data must not be shown as measured zero');
+  assert.equal(display(null).color, theme.visualization.getColorByName('gray'), 'Missing data must stay neutral');
+}
+assert.equal(dashboard.panels.find(p => p.id === 12).fieldConfig.defaults.custom.gradientMode, 'scheme', 'Failure bars must use threshold colors per value');
+console.log('Failure colors: zero green, positive red, missing neutral PASS');
