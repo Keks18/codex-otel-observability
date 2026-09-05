@@ -103,6 +103,13 @@ foreach ($field in @('input_tokens','cached_input_tokens','output_tokens','reaso
 }
 Assert-True ($tokenText -match '\$A - \$B') 'Non-cached input derivation is missing.'
 
+# Tempo exemplars add long annotation frames alongside the metric series.
+# Grafana server-side math tries to read those frames as wide numeric series.
+# Disable exemplars on every Tempo target in a panel using expressions.
+foreach ($target in @($tokenPanel.targets | Where-Object { $_.datasource.uid -eq 'tempo' })) {
+    Assert-True ($null -ne $target.PSObject.Properties['exemplars'] -and $target.exemplars -eq 0) "Token target $($target.refId) must disable exemplars before Grafana math reads its frames."
+}
+
 $latency = @($dashboard.panels | Where-Object id -eq 19)[0]
 $latencyText = (@($latency.targets | ForEach-Object query) -join ' ')
 Assert-True ($latencyText -match 'quantile_over_time\(span:duration, \.50\)' -and $latencyText -match 'quantile_over_time\(span:duration, \.95\)' -and $latencyText -match 'max_over_time\(span:duration\)') 'Tool latency quantiles drifted.'

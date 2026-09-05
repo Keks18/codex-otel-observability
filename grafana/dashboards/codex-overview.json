@@ -958,6 +958,7 @@
             "type": "tempo",
             "uid": "tempo"
           },
+          "exemplars": 0,
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\") by (span.model)",
           "queryType": "traceql",
@@ -969,6 +970,7 @@
             "type": "tempo",
             "uid": "tempo"
           },
+          "exemplars": 0,
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\") by (span.model)",
           "queryType": "traceql",
@@ -980,6 +982,7 @@
             "type": "tempo",
             "uid": "tempo"
           },
+          "exemplars": 0,
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.output_tokens\") by (span.model)",
           "queryType": "traceql",
@@ -991,6 +994,7 @@
             "type": "tempo",
             "uid": "tempo"
           },
+          "exemplars": 0,
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.reasoning_output_tokens\") by (span.model)",
           "queryType": "traceql",
@@ -1002,6 +1006,7 @@
             "type": "tempo",
             "uid": "tempo"
           },
+          "exemplars": 0,
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (span.model)",
           "queryType": "traceql",
