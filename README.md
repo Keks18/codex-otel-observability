@@ -47,6 +47,28 @@ The formulas and completeness rules are defined in [METRIC_CONTRACT.md](METRIC_C
 
 The example keeps raw user prompts disabled. It does not edit your Codex configuration automatically.
 
+## Update the dashboard
+
+After pulling repository updates, run `docker compose up -d`. Compose applies
+changed service mounts automatically. Dashboard JSON files are mounted as a
+directory, so replacements made by Git or an editor remain visible inside LGTM.
+Grafana polls that directory every 30 seconds; allow up to 30 seconds for the
+provisioned dashboard to update, then reload its browser page. Its data refresh
+remains `10s`.
+
+Changes to the provisioning YAML itself are read at Grafana startup; when only
+that file changes, run `docker compose up -d --no-deps --force-recreate lgtm`.
+This preserves the named telemetry volume and leaves the Collector running.
+
+The optional provisioning smoke test starts a uniquely named temporary LGTM
+container on a random loopback port, replaces a synthetic dashboard file, runs
+`compose up -d` again, and verifies the update without a container restart. It
+removes its test container/network and never mounts the telemetry volume:
+
+```powershell
+.\scripts\test-dashboard-provisioning.ps1
+```
+
 ## Performance report
 
 ```powershell

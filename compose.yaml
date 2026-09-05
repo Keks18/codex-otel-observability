@@ -9,7 +9,7 @@ services:
       - "127.0.0.1:3000:3000"
     volumes:
       - lgtm-data:/data
-      - ./grafana/dashboards/codex-overview.json:/otel-lgtm/grafana/conf/provisioning/dashboards/codex/codex-overview.json:ro
+      - ./grafana/dashboards:/otel-lgtm/grafana/conf/provisioning/dashboards/codex:ro
       - ./grafana/provisioning/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/codex.yaml:ro
     networks:
       - observability

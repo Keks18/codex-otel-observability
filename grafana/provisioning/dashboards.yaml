@@ -7,7 +7,8 @@ providers:
     type: file
     disableDeletion: true
     allowUiUpdates: false
-    updateIntervalSeconds: 10
+    # More than 10 seconds forces polling; Docker bind mounts may lose watch events.
+    updateIntervalSeconds: 30
     options:
       path: /otel-lgtm/grafana/conf/provisioning/dashboards/codex
       foldersFromFilesStructure: false
