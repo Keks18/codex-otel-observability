@@ -79,6 +79,7 @@ under the ignored `artifacts/` directory:
 ```powershell
 npm install --prefix artifacts/grafana-transform-check --cache artifacts/npm-cache --ignore-scripts --no-audit --no-fund @grafana/data@13.2.0 rxjs@7.8.2
 node scripts/test-slowest-tool-calls.cjs
+node scripts/test-dashboard-presentation.cjs
 ```
 
 ## Current v0.2 limitations

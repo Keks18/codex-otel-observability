@@ -59,7 +59,8 @@
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
-          "unit": "short"
+          "unit": "short",
+          "displayName": "Completed turns"
         },
         "overrides": []
       },
@@ -108,7 +109,8 @@
         "defaults": {
           "decimals": 1,
           "noValue": "—",
-          "unit": "s"
+          "unit": "s",
+          "displayName": "Avg duration"
         },
         "overrides": []
       },
@@ -156,7 +158,8 @@
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
-          "unit": "short"
+          "unit": "short",
+          "displayName": "Total tokens"
         },
         "overrides": []
       },
@@ -205,7 +208,8 @@
         "defaults": {
           "decimals": 1,
           "noValue": "—",
-          "unit": "percent"
+          "unit": "percent",
+          "displayName": "Cache hit %"
         },
         "overrides": []
       },
@@ -302,7 +306,8 @@
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
-          "unit": "short"
+          "unit": "short",
+          "displayName": "Tool calls"
         },
         "overrides": []
       },
@@ -354,7 +359,8 @@
             "mode": "fixed"
           },
           "noValue": "—",
-          "unit": "short"
+          "unit": "short",
+          "displayName": "Tool failures"
         },
         "overrides": []
       },
@@ -427,7 +433,8 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 0,
-          "noValue": "—"
+          "noValue": "—",
+          "displayName": "Incomplete exported turns"
         },
         "overrides": []
       },
@@ -450,7 +457,6 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "legendFormat": "Incomplete",
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && span.\"codex.turn.token_usage.total_tokens\" = nil }) | { name = \"session_task.turn\" && span.\"codex.turn.token_usage.total_tokens\" = nil } | count_over_time()",
           "queryType": "traceql",
@@ -873,7 +879,20 @@
           },
           "unit": "s"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Duration · ${__field.labels[\"span.model\"]}"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -903,7 +922,6 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "legendFormat": "{{span.model}}",
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | avg_over_time(span:duration) by (span.model)",
           "queryType": "traceql",
@@ -929,7 +947,80 @@
           },
           "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Input · ${__field.labels[\"span.model\"]}"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Cached input · ${__field.labels[\"span.model\"]}"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Output · ${__field.labels[\"span.model\"]}"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Reasoning · ${__field.labels[\"span.model\"]}"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "E"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Total · ${__field.labels[\"span.model\"]}"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "F"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Non-cached input · ${__field.labels[\"span.model\"]}"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -962,8 +1053,7 @@
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\") by (span.model)",
           "queryType": "traceql",
-          "refId": "A",
-          "legendFormat": "Input"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -974,8 +1064,7 @@
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\") by (span.model)",
           "queryType": "traceql",
-          "refId": "B",
-          "legendFormat": "Cached input"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -986,8 +1075,7 @@
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.output_tokens\") by (span.model)",
           "queryType": "traceql",
-          "refId": "C",
-          "legendFormat": "Output"
+          "refId": "C"
         },
         {
           "datasource": {
@@ -998,8 +1086,7 @@
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.reasoning_output_tokens\") by (span.model)",
           "queryType": "traceql",
-          "refId": "D",
-          "legendFormat": "Reasoning"
+          "refId": "D"
         },
         {
           "datasource": {
@@ -1010,8 +1097,7 @@
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (span.model)",
           "queryType": "traceql",
-          "refId": "E",
-          "legendFormat": "Total"
+          "refId": "E"
         },
         {
           "datasource": {
@@ -1042,7 +1128,20 @@
           },
           "unit": "s"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Model sampling"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -1072,7 +1171,6 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "legendFormat": "responses_websocket.stream_request",
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"run_sampling_request\" }) | { name = \"run_sampling_request\" } | avg_over_time(span:duration)",
           "queryType": "traceql",
@@ -1100,7 +1198,20 @@
           "min": 0,
           "decimals": 2
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Model rounds / turn"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -1184,7 +1295,20 @@
           },
           "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failures"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -1213,7 +1337,6 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "legendFormat": "Failures",
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" } | count_over_time()",
           "queryType": "traceql",
@@ -1626,7 +1749,32 @@
         "defaults": {
           "decimals": 0
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Calls · ${__field.labels[\"event.tool_name\"]}"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failures · ${__field.labels[\"event.tool_name\"]}"
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1648,7 +1796,6 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "legendFormat": "Calls",
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | count_over_time() by (event.tool_name)",
           "queryType": "traceql",
@@ -1659,7 +1806,6 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "legendFormat": "Failures",
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" } | count_over_time() by (event.tool_name)",
           "queryType": "traceql",
@@ -1686,7 +1832,44 @@
         "defaults": {
           "unit": "s"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p50 · ${__field.labels[\"event.tool_name\"]}"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p95 · ${__field.labels[\"event.tool_name\"]}"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Max · ${__field.labels[\"event.tool_name\"]}"
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1709,7 +1892,6 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "legendFormat": "p50",
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | quantile_over_time(span:duration, .50) by (event.tool_name)",
           "queryType": "traceql",
@@ -1720,7 +1902,6 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "legendFormat": "p95",
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | quantile_over_time(span:duration, .95) by (event.tool_name)",
           "queryType": "traceql",
@@ -1731,7 +1912,6 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "legendFormat": "max",
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | max_over_time(span:duration) by (event.tool_name)",
           "queryType": "traceql",
