@@ -70,6 +70,11 @@ select and group by that scope. The report prefers `event.tool_name`, with
 legacy `tool_name`, `span.tool_name`, `codex.tool.name`, and
 `span.codex.tool.name` columns as fallbacks; missing names remain `unknown`.
 
+Duration units depend on the query type: TraceQL metrics over `span:duration`
+return seconds, so **Tool latency by tool** uses Grafana's `s` unit without
+rescaling the values. Tempo search table `duration` values are nanoseconds;
+the report converts those to milliseconds for its `*DurationMs` fields.
+
 ## Coverage warnings
 
 The dashboard and report must surface, rather than silently discard:
