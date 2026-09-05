@@ -1094,9 +1094,11 @@
             "drawStyle": "line",
             "fillOpacity": 10,
             "lineWidth": 2,
-            "showPoints": "never"
+            "showPoints": "always"
           },
-          "unit": "s"
+          "unit": "none",
+          "min": 0,
+          "decimals": 2
         },
         "overrides": []
       },
@@ -1128,37 +1130,40 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "legendFormat": "Model rounds / turn",
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"responses_websocket.stream_request\" }) | { name = \"responses_websocket.stream_request\" } | count_over_time()",
-          "queryType": "traceql",
+          "hide": true,
+          "limit": 500,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"responses_websocket.stream_request\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"responses_websocket.stream_request\" }",
+          "queryType": "traceqlSearch",
           "refId": "A",
-          "hide": true
+          "spss": 100,
+          "tableType": "spans"
         },
         {
           "datasource": {
             "type": "tempo",
             "uid": "tempo"
           },
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | count_over_time()",
-          "queryType": "traceql",
+          "hide": true,
+          "limit": 500,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }",
+          "queryType": "traceqlSearch",
           "refId": "B",
-          "hide": true
+          "spss": 100,
+          "tableType": "spans"
         },
         {
           "datasource": {
             "type": "__expr__",
             "uid": "__expr__"
           },
-          "expression": "$A / $B",
+          "expression": "WITH turns AS (SELECT traceIdHidden AS trace_id, MAX(time) AS time FROM B GROUP BY traceIdHidden), rounds AS (SELECT traceIdHidden AS trace_id, COUNT(*) AS rounds FROM A GROUP BY traceIdHidden) SELECT turns.time AS time, AVG(COALESCE(rounds.rounds, 0)) AS `Model rounds / turn` FROM turns LEFT JOIN rounds ON rounds.trace_id = turns.trace_id GROUP BY turns.time ORDER BY turns.time",
           "refId": "C",
-          "type": "math"
+          "type": "sql"
         }
       ],
       "title": "Model rounds / turn",
       "type": "timeseries",
-      "description": "WebSocket model rounds divided by completed turns, joined by Trace ID."
+      "description": "WebSocket model rounds per completed turn, joined by Trace ID and plotted at turn start. Turns without rounds count as zero; turns starting at the same timestamp are averaged. Search is limited to 500 traces and 100 spans per trace; larger results may undercount."
     },
     {
       "datasource": {

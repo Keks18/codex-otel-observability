@@ -111,6 +111,15 @@ foreach ($target in @($tokenPanel.targets | Where-Object { $_.datasource.uid -eq
 }
 
 $latency = @($dashboard.panels | Where-Object id -eq 19)[0]
+$roundsPanel = @($dashboard.panels | Where-Object id -eq 11)[0]
+Assert-True ($roundsPanel.fieldConfig.defaults.unit -eq 'none') 'Model rounds must be a count, not a duration.'
+Assert-True (@($roundsPanel.targets | Where-Object { $_.datasource.uid -eq 'tempo' -and $_.queryType -eq 'traceqlSearch' -and $_.tableType -eq 'spans' }).Count -eq 2) 'Model rounds must join span tables, not divide time buckets.'
+foreach ($target in @($roundsPanel.targets | Where-Object { $_.datasource.uid -eq 'tempo' })) {
+    Assert-True ($target.query -match 'session_task\.turn' -and $target.query -match 'total_tokens') 'Model rounds searches must be scoped to completed-turn traces.'
+}
+$roundsSql = @($roundsPanel.targets | Where-Object refId -eq 'C')[0]
+Assert-True ($roundsSql.type -eq 'sql' -and $roundsSql.expression -match 'LEFT JOIN' -and $roundsSql.expression -match 'COALESCE' -and $roundsSql.expression -match 'traceIdHidden') 'Model rounds must retain completed turns without rounds and join by Trace ID.'
+
 $latencyText = (@($latency.targets | ForEach-Object query) -join ' ')
 Assert-True ($latencyText -match 'quantile_over_time\(span:duration, \.50\)' -and $latencyText -match 'quantile_over_time\(span:duration, \.95\)' -and $latencyText -match 'max_over_time\(span:duration\)') 'Tool latency quantiles drifted.'
 

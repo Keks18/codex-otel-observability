@@ -65,6 +65,13 @@ Run the synthetic regression fixture with:
 .\scripts\test-codex-performance-report.ps1
 ```
 
+With Grafana running, verify the **Model rounds / turn** panel's SQL against
+synthetic data and the report's fixed snapshot (read-only, no telemetry writes):
+
+```powershell
+.\scripts\test-model-rounds.ps1
+```
+
 ## Current v0.2 limitations
 
 - When Tempo has no `span.cwd` values, the dashboard leaves KPI unset and shows
