@@ -72,6 +72,15 @@ synthetic data and the report's fixed snapshot (read-only, no telemetry writes):
 .\scripts\test-model-rounds.ps1
 ```
 
+To test **Slowest tool calls** transformations against Grafana's library with
+synthetic span frames, install the optional Node.js test dependencies locally
+under the ignored `artifacts/` directory:
+
+```powershell
+npm install --prefix artifacts/grafana-transform-check --cache artifacts/npm-cache --ignore-scripts --no-audit --no-fund @grafana/data@13.2.0 rxjs@7.8.2
+node scripts/test-slowest-tool-calls.cjs
+```
+
 ## Current v0.2 limitations
 
 - When Tempo has no `span.cwd` values, the dashboard leaves KPI unset and shows

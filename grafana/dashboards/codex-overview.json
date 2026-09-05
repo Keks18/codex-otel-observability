@@ -1837,27 +1837,34 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "name": true,
-              "traceName": true,
-              "traceService": true
+              "Name": true,
+              "Trace Name": true,
+              "Trace Service": true
             },
             "indexByName": {
               "event.tool_name": 0,
-              "duration": 1,
-              "success": 2,
-              "call_id": 3,
-              "traceIdHidden": 4
+              "Duration": 1,
+              "event.success": 2,
+              "span.call_id": 3,
+              "span.codex.tool.call_id": 4,
+              "Span ID": 5,
+              "Start time": 6,
+              "traceIdHidden": 7
             },
-            "renameByName": {}
+            "renameByName": {
+              "event.success": "Success",
+              "span.call_id": "Call ID",
+              "span.codex.tool.call_id": "Legacy call ID",
+              "Start time": "Time"
+            }
           }
         },
         {
           "id": "sortBy",
           "options": {
-            "fields": {},
             "sort": [
               {
-                "field": "duration",
+                "field": "Duration",
                 "desc": true
               }
             ]
