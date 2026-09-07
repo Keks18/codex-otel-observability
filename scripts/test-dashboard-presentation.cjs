@@ -30,16 +30,16 @@ for (const panel of dashboard.panels.filter(p => ['stat', 'timeseries'].includes
       const label = [8, 9].includes(panel.id) ? 'span.model' : 'event.tool_name';
       const frame = g.createDataFrame({ refId: target.refId, fields: [
         { name: 'time', type: 'time', values: [1788508200000] },
-        { name: 'count_over_time', type: 'number', labels: { [label]: group },
+        { name: panel.id === 17 ? 'missing_turn_or_root' : 'count_over_time', type: 'number', labels: { [label]: group },
           config: { displayNameFromDS: 'avg_over_time' }, values: [1] },
       ] });
       const result = g.applyFieldOverrides({ data: [frame], fieldConfig: panel.fieldConfig, theme,
         // Resolve the documented bracket notation against the field scope.
-        replaceVariables: (value, scope) => value.replace(/\$\{__field\.labels\["([^"]+)"\]\}/g,
+        replaceVariables: (value, scope) => value.replace(/\$\{__field\.name\}/g, scope.__dataContext.value.field.name).replace(/\$\{__field\.labels\["([^"]+)"\]\}/g,
           (_, key) => scope.__dataContext.value.field.labels?.[key] || ''),
       })[0];
       const name = g.getFieldDisplayName(result.fields[1], result);
-      const base = panel.type === 'stat' ? panel.title : expected[panel.id][target.refId];
+      const base = panel.type === 'stat' ? (panel.id === 17 ? 'missing_turn_or_root' : panel.title) : expected[panel.id][target.refId];
       assert.equal(name, grouped ? `${base} · ${group}` : base, `Panel ${panel.id}/${target.refId}`);
       assert.ok(!names.has(name), `Series labels must remain distinct in panel ${panel.id}`);
       names.add(name);

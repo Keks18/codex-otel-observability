@@ -4,6 +4,27 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Report schema 3.0 separates completed/failed/unclassified turn status from
+  token availability. No trace-age completion inference; missing tokens stay
+  unknown and completed turns without usage emit a warning.
+- Dashboard lifecycle panels join explicit terminal signals by Trace ID, expose
+  `missing_turn_or_root`, and show readable status/count labels.
+- Add a minimal app-server terminal-notification to OTLP converter with required
+  original trace correlation; existing historical traces are not relabeled
+  without authoritative terminal evidence.
+- Restore configuration, full-trace reader and regression dependencies referenced
+  by the previous update but absent from its commit.
+
+### Verification
+
+- Synthetic snapshot: 2 completed, 1 failed/unclassified, 33 tool calls and
+  2 tool failures. Actual Grafana lifecycle SQL agrees with the hydrated report.
+- Existing report, dashboard, model-round, presentation and tool-table checks
+  pass. Pinned Tempo configuration validates; live queries execute on an empty
+  snapshot. Non-empty local telemetry/browser verification is not claimed.
+
 ## [0.2.1] - 2026-09-05
 
 ### Changed

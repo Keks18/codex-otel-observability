@@ -1,6 +1,6 @@
 # Codex OTEL Observability
 
-Unofficial, local-first observability kit for Codex. It collects Codex OpenTelemetry data through a dedicated OpenTelemetry Collector and shows completed/active coverage, tokens, cache usage, model sampling, tool calls, failures, and Tempo traces in Grafana.
+Unofficial, local-first observability kit for Codex. It collects Codex OpenTelemetry data through a dedicated OpenTelemetry Collector and shows completed/failed/unclassified coverage, tokens, cache usage, model sampling, tool calls, failures, and Tempo traces in Grafana.
 
 This repository is intended for developer workstations and small local experiments. It is not a production or shared-team observability platform.
 
@@ -79,6 +79,41 @@ removes its test container/network and never mounts the telemetry volume:
 .\scripts\test-dashboard-provisioning.ps1
 ```
 
+## Regular turns and terminal outcomes
+
+Regular turns do not need a `session_task.turn` span when they carry the explicit
+terminal signal described in [METRIC_CONTRACT.md](METRIC_CONTRACT.md). Completion
+and token coverage are independent: a completed turn with no usage is counted,
+with a warning. Failed and unclassified traces appear separately in **Turns** and
+**Turn status and coverage**. No outcome is inferred from trace age.
+
+Stock Codex telemetry may not include this signal. If your integration captures
+an app-server `turn/completed` notification and knows its original trace ID,
+convert it to a bounded OTLP span with:
+
+```powershell
+$terminalPayload = .\scripts\convert-codex-turn-terminal.ps1 `
+  -NotificationPath .\artifacts\turn-completed.json `
+  -TraceId '<original 32-hex trace ID>' -Project 'D:\your-project'
+# Optional adoption step: send only the converted allowlisted payload locally.
+Invoke-RestMethod -Uri 'http://127.0.0.1:4318/v1/traces' -Method Post `
+  -ContentType 'application/json' -Body $terminalPayload
+```
+
+The converter does not invoke Codex or send anything automatically. Never
+substitute a turn UUID for its trace ID. Without authoritative correlation,
+leave the trace unclassified. Never commit the notification or generated payload.
+Existing installations are not modified by these repository changes.
+
+Run the synthetic acceptance snapshot (2 completed, 1 failed/unclassified,
+33 tool calls, 2 tool failures), including actual Grafana SQL comparisons:
+
+```powershell
+.\scripts\test-regular-turns.ps1
+# Report/converter-only checks when Grafana is unavailable:
+.\scripts\test-regular-turns.ps1 -SkipGrafana
+```
+
 ## Performance report
 
 ```powershell
@@ -88,7 +123,7 @@ removes its test container/network and never mounts the telemetry volume:
 ```
 
 The report captures one UTC `as_of`, uses absolute query bounds, and does not
-upload results. JSON schema `2.0` includes completed/active/incomplete coverage,
+upload results. JSON schema `3.0` includes completed/failed/unclassified status, independent token coverage,
 token semantics, per-model and per-tool breakdowns, bounded failures, and Trace IDs.
 
 Run the synthetic regression fixture with:
@@ -97,7 +132,7 @@ Run the synthetic regression fixture with:
 .\scripts\test-codex-performance-report.ps1
 ```
 
-Compare the six live KPI against the report on one immutable snapshot:
+Compare lifecycle and tool KPI against the report on one immutable snapshot:
 
 ```powershell
 .\scripts\test-live-snapshot.ps1 -Project 'D:\your-project' -Period '7d' -AsOf '2026-09-07T18:20:00Z'
@@ -129,8 +164,9 @@ node scripts/test-dashboard-presentation.cjs
   may omit events from long traces even below the per-trace search limit.
 - When Tempo has no `span.cwd` values, the dashboard leaves KPI unset and shows
   `Project not selected` until a project becomes available.
-- Active turns are inferred from recently exported scoped activity; a truly
-  in-flight span is not visible until its exporter emits data.
+- A trace without an explicit terminal signal or legacy completion evidence is
+  unclassified, even when old. `missing_turn_or_root` appears in the dashboard.
+  A truly in-flight span is not visible until its exporter emits data.
 - Tempo search is limit-bound. Partial/oversized results are warnings, not proof
   that all upstream trace data was returned.
 - The dashboard depends on the telemetry schema emitted by the installed Codex version.

@@ -34,11 +34,11 @@ Assert-True ($raw -notmatch '\{\{\.output\}\}|tool_arguments|user_prompt') 'Unbo
 
 $snapshot = @($dashboard.panels | Where-Object id -eq 16)[0]
 Assert-True ($snapshot.options.content -match '\$\{cwd:text\}') 'Snapshot panel must render the project selection text.'
-Assert-True ($cwd[0].current.text -match '⚠' -and $cwd[0].current.text -match 'Project not selected') 'Unselected-project warning is missing.'
+Assert-True ($cwd[0].current.text -match ([string][char]0x26a0) -and $cwd[0].current.text -match 'Project not selected') 'Unselected-project warning is missing.'
 
 $statPanels = @($dashboard.panels | Where-Object id -in @(1, 2, 3, 4, 5, 6, 17))
 foreach ($panel in $statPanels) {
-    Assert-True ($panel.fieldConfig.defaults.noValue -eq '—') "Stat panel $($panel.id) must stay unset when no project is selected."
+    Assert-True ($panel.fieldConfig.defaults.noValue -eq ([string][char]0x2014)) "Stat panel $($panel.id) must stay unset when no project is selected."
 }
 
 $tempoQueries = @($dashboard.panels | ForEach-Object {
@@ -83,16 +83,16 @@ Assert-True ($multipleProjects.Projects -ccontains 'C:\work\alpha' -and $multipl
 'dashboard project states: empty, single, multiple PASS'
 
 $completed = @($dashboard.panels | Where-Object id -eq 1)[0].targets[0].query
-Assert-True ($completed -match 'session_task\.turn' -and $completed -match 'total_tokens' -and $completed -match 'cwd') 'Completed-turn KPI contract drifted.'
+Assert-True ($completed -match 'codex\.turn\.terminal' -and $completed -match 'codex\.turn\.status' -and $completed -match 'cwd') 'Completed-turn KPI must accept an explicit terminal signal.'
 
-foreach ($panel in @($dashboard.panels | Where-Object id -in @(1,2,3,4,5,6,17))) {
+foreach ($panel in @($dashboard.panels | Where-Object id -in @(3,4,5,6))) {
     foreach ($target in @($panel.targets | Where-Object { $_.datasource.uid -eq 'tempo' })) {
         Assert-True ($target.metricsQueryType -eq 'range' -and $target.exemplars -eq 0 -and $target.step -eq '2m') 'Snapshot KPI must use complete range series with an explicit bounded step and no exemplars.'
     }
-    if ($panel.id -in @(1,3,5,6,17)) {
+    if ($panel.id -in @(3,5,6)) {
         Assert-True ($panel.options.reduceOptions.calcs[0] -eq 'sum') 'Count/token KPI must sum the entire snapshot, not the last bucket.'
     }
-    if ($panel.id -in @(2,4)) {
+    if ($panel.id -in @(4)) {
         $reductions = @($panel.targets | Where-Object { $_.PSObject.Properties['reducer'] })
         Assert-True ($reductions.Count -eq 2 -and @($reductions | Where-Object reducer -ne 'sum').Count -eq 0) 'Ratios must divide snapshot sums, never average bucket averages.'
     }
@@ -134,10 +134,7 @@ foreach ($target in @($tokenPanel.targets | Where-Object { $_.datasource.uid -eq
 $latency = @($dashboard.panels | Where-Object id -eq 19)[0]
 $roundsPanel = @($dashboard.panels | Where-Object id -eq 11)[0]
 Assert-True ($roundsPanel.fieldConfig.defaults.unit -eq 'none') 'Model rounds must be a count, not a duration.'
-Assert-True (@($roundsPanel.targets | Where-Object { $_.datasource.uid -eq 'tempo' -and $_.queryType -eq 'traceqlSearch' -and $_.tableType -eq 'spans' }).Count -eq 2) 'Model rounds must join span tables, not divide time buckets.'
-foreach ($target in @($roundsPanel.targets | Where-Object { $_.datasource.uid -eq 'tempo' })) {
-    Assert-True ($target.query -match 'session_task\.turn' -and $target.query -match 'total_tokens') 'Model rounds searches must be scoped to completed-turn traces.'
-}
+Assert-True (@($roundsPanel.targets | Where-Object { $_.datasource.uid -eq 'tempo' -and $_.queryType -eq 'traceqlSearch' -and $_.tableType -eq 'spans' }).Count -eq 5) 'Model rounds must join lifecycle and round span tables.'
 $roundsSql = @($roundsPanel.targets | Where-Object refId -eq 'C')[0]
 Assert-True ($roundsSql.type -eq 'sql' -and $roundsSql.expression -match 'LEFT JOIN' -and $roundsSql.expression -match 'COALESCE' -and $roundsSql.expression -match 'traceIdHidden') 'Model rounds must retain completed turns without rounds and join by Trace ID.'
 
@@ -160,3 +157,12 @@ foreach ($panel in $toolPanels) {
 Assert-True ($linkCount -ge 3) 'Required Trace ID links are missing.'
 
 'codex dashboard contract regression: PASS'
+
+foreach ($id in @(1,2,7,11,13,17)) {
+    $panel = @($dashboard.panels | Where-Object id -eq $id)[0]
+    $sql = @($panel.targets | Where-Object { $_.PSObject.Properties['expression'] })[-1].expression
+    Assert-True ($sql -match "WHEN failed.traceIdHidden IS NOT NULL THEN 'failed'" -and $sql -match "ELSE 'unclassified'" -and $sql -notmatch 'grace|NOW\(') "Lifecycle panel $id must use the same failure precedence without age heuristics."
+}
+$coverage = @($dashboard.panels | Where-Object id -eq 17)[0]
+Assert-True ($coverage.targets[-1].expression -match 'missing_turn_or_root' -and $coverage.targets[-1].expression -match 'Completed without token usage') 'Lifecycle coverage must display missing signals and missing tokens separately.'
+'lifecycle dashboard contract: PASS'

@@ -12,8 +12,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$contractVersion = '2.0'
-$activeGraceSeconds = 120
+$contractVersion = '3.0'
 . (Join-Path $PSScriptRoot 'trace-activity.ps1')
 
 function ConvertTo-TraceQlString([string]$Value) {
@@ -86,6 +85,11 @@ function Get-Sum($Items, [string]$Property) {
     if (@($Items).Count -eq 0) { return 0 }
     return ($Items | Measure-Object $Property -Sum).Sum
 }
+function Get-ObservedSum($Items, [string]$Property) {
+    $observed = @($Items | Where-Object { $null -ne $_.$Property })
+    if ($observed.Count -eq 0) { return $null }
+    return (Get-Sum $observed $Property)
+}
 function ConvertTo-Md($Value) {
     if ($null -eq $Value) { return '' }
     ([string]$Value).Replace('|', '\|').Replace([char]13, ' ').Replace([char]10, ' ')
@@ -111,7 +115,7 @@ $tempo = @{ type = 'tempo'; uid = 'tempo' }
 $terminal = 'dispatch_tool_call_with_terminal_outcome'
 $selectTools = 'select(event.tool_name, span.tool_name, span."codex.tool.name", span.call_id, span."codex.tool.call_id", span.nested, span.retry_count, span.recovered, event.success, span.failure_class, span.reason_summary, span."error.kind")'
 $queries = @(
-    @{ refId='A'; datasource=$tempo; queryType='traceqlSearch'; tableType='spans'; limit=$MaxTurns; spss=1; query='(' + $projectSet + ' && { name = "session_task.turn" }) | { name = "session_task.turn" } | select(span.model, span."codex.turn.reasoning_effort", span."codex.turn.token_usage.input_tokens", span."codex.turn.token_usage.output_tokens", span."codex.turn.token_usage.reasoning_output_tokens", span."codex.turn.token_usage.cached_input_tokens", span."codex.turn.token_usage.total_tokens")' },
+    @{ refId='A'; datasource=$tempo; queryType='traceqlSearch'; tableType='spans'; limit=$MaxTurns; spss=100; query='(' + $projectSet + ' && { name = "session_task.turn" || name = "codex.turn.terminal" }) | { name = "session_task.turn" || name = "codex.turn.terminal" } | select(span."codex.turn.status", span."codex.turn.signal_version", span.model, span."codex.turn.reasoning_effort", span."codex.turn.token_usage.input_tokens", span."codex.turn.token_usage.output_tokens", span."codex.turn.token_usage.reasoning_output_tokens", span."codex.turn.token_usage.cached_input_tokens", span."codex.turn.token_usage.total_tokens")' },
     @{ refId='B'; datasource=$tempo; queryType='traceqlSearch'; tableType='spans'; limit=$MaxTurns; spss=20; query=$projectSet + ' | select(span.cwd)' },
     @{ refId='C'; datasource=$tempo; queryType='traceqlSearch'; tableType='spans'; limit=$MaxTurns; spss=100; query='(' + $projectSet + ' && { name = "' + $terminal + '" }) | { name = "' + $terminal + '" } | ' + $selectTools },
     @{ refId='D'; datasource=$tempo; queryType='traceqlSearch'; tableType='spans'; limit=$MaxTurns; spss=100; query='(' + $projectSet + ' && { name = "' + $terminal + '" && event.success = "false" }) | { name = "' + $terminal + '" && event.success = "false" } | ' + $selectTools },
@@ -143,7 +147,7 @@ foreach ($ref in @('A','B','C','D','R','S')) {
 # omit spans split across stored blocks even below spss and without HTTP 206.
 # Hydrate each discovered activity trace once, then deduplicate by span/call ID.
 if (-not $FixturePath -or $TraceFixturePath) {
-    $traceIds = @(@($raw.C + $raw.D + $raw.R + $raw.S) | ForEach-Object { Get-TraceId $_ } | Where-Object { $_ } | Sort-Object -Unique)
+    $traceIds = @(@($raw.A + $raw.B + $raw.C + $raw.D + $raw.R + $raw.S) | ForEach-Object { Get-TraceId $_ } | Where-Object { $_ } | Sort-Object -Unique)
     $activity = [System.Collections.Generic.List[object]]::new()
     $traceFixtures = if ($TraceFixturePath) { Get-Content -Raw $TraceFixturePath | ConvertFrom-Json } else { $null }
     foreach ($traceId in $traceIds) {
@@ -155,50 +159,70 @@ if (-not $FixturePath -or $TraceFixturePath) {
         }
         # A failed hydration must fail the report, never silently produce totals
         # from a mixture of complete and truncated search span sets.
-        foreach ($row in @(ConvertFrom-TraceActivity $traceResponse $traceId $fromValue.ToUnixTimeMilliseconds() $toMs)) { $activity.Add($row) }
+        foreach ($row in @(ConvertFrom-TraceActivity $traceResponse $traceId $fromValue.ToUnixTimeMilliseconds() $toMs $Project)) { $activity.Add($row) }
     }
-    foreach ($ref in @('C','R','S')) { $raw[$ref]=@($activity | Where-Object source -eq $ref) }
+    foreach ($ref in @('A','B','C','R','S')) { $raw[$ref]=@($activity | Where-Object source -eq $ref) }
     $raw.D=@($raw.C | Where-Object { (Get-Value $_ @('event.success') '') -in @('false','False','0') })
 }
 
-$turnRows = @()
-$duplicateTurns = 0
-foreach ($group in @($raw.A | Where-Object { Get-TraceId $_ } | Group-Object { Get-TraceId $_ })) {
-    $ordered = @($group.Group | Sort-Object { Get-TimeMs $_ } -Descending)
-    $turnRows += $ordered[0]
-    $duplicateTurns += [math]::Max($ordered.Count - 1, 0)
+# Status is independent of token coverage. Explicit terminal failure wins over
+# a legacy success candidate; contradictory terminal signals are never hidden.
+function Test-TokenUsage($Row) {
+    (Test-Value $Row @('codex.turn.token_usage.total_tokens')) -or
+    ((Test-Value $Row @('codex.turn.token_usage.input_tokens')) -and (Test-Value $Row @('codex.turn.token_usage.output_tokens')))
 }
-Add-Warning 'duplicate_turn_span' $duplicateTurns 'Newest duplicate turn span was selected.'
-
 $completedRows = @()
-$incompleteRows = @()
-$knownTurn = @{}
-foreach ($row in $turnRows) {
-    $trace = Get-TraceId $row
-    $knownTurn[$trace] = $true
-    if ((Test-Value $row @('codex.turn.token_usage.total_tokens')) -or
-        ((Test-Value $row @('codex.turn.token_usage.input_tokens')) -and (Test-Value $row @('codex.turn.token_usage.output_tokens')))) {
-        $completedRows += $row
-    } else { $incompleteRows += $row }
+$failedRows = @()
+$unclassifiedRows = @()
+$duplicateTurns = 0
+$allActivity = @($raw.A + $raw.B + $raw.C + $raw.R + $raw.S)
+foreach ($group in @($allActivity | Where-Object { Get-TraceId $_ } | Group-Object { Get-TraceId $_ })) {
+    $candidates = @($raw.A | Where-Object { (Get-TraceId $_) -eq $group.Name -and ((Get-Value $_ @('name') 'session_task.turn') -eq 'session_task.turn' -or ((Get-Value $_ @('name') '') -eq 'codex.turn.terminal' -and (Get-Value $_ @('codex.turn.signal_version') 0) -eq 1)) } | Sort-Object { Get-TimeMs $_ } -Descending)
+    $explicit = @($candidates | Where-Object { (Get-Value $_ @('codex.turn.status') '') -in @('completed','failed','interrupted') })
+    $fail = @($explicit | Where-Object { (Get-Value $_ @('codex.turn.status') '') -in @('failed','interrupted') })
+    $success = @($explicit | Where-Object { (Get-Value $_ @('codex.turn.status') '') -eq 'completed' })
+    $legacy = @($candidates | Where-Object {
+        (Get-Value $_ @('name') 'session_task.turn') -eq 'session_task.turn' -and
+        -not (Test-Value $_ @('codex.turn.status')) -and (Test-TokenUsage $_)
+    })
+    $duplicateTurns += [math]::Max($candidates.Count - 1, 0)
+    if ($fail.Count) {
+        $row = $fail[0]; $state = 'failed'
+        if ($success.Count -or $legacy.Count) { Add-Warning 'conflicting_terminal_signals' 1 'Failure takes precedence over a success candidate on the same trace.' }
+    } elseif ($success.Count) {
+        $row = $success[0]; $state = 'completed'
+    } elseif ($legacy.Count) {
+        $row = $legacy[0]; $state = 'completed'
+        Add-Warning 'legacy_completion_signal' 1 'Completion inferred from legacy turn token usage; adopt the explicit terminal signal.'
+    } else {
+        $row = @($group.Group | Sort-Object { Get-TimeMs $_ } -Descending)[0]; $state = 'unclassified'
+    }
+    # Token attributes may be on a separate canonical legacy span in the trace.
+    # Never sum token fields across duplicate or nested spans.
+    $usage = @($candidates | Where-Object { Test-TokenUsage $_ })
+    $item = [ordered]@{}
+    foreach ($property in $row.PSObject.Properties) { $item[$property.Name] = $property.Value }
+    $item['turnStatus'] = $state
+    $item['tokenUsageAvailable'] = ($usage.Count -gt 0)
+    if ($usage.Count) {
+        foreach ($property in $usage[0].PSObject.Properties) {
+            if ($property.Name -like 'codex.turn.token_usage.*' -or $property.Name -in @('model','codex.turn.reasoning_effort')) { $item[$property.Name]=$property.Value }
+        }
+    }
+    $canonical = [pscustomobject]$item
+    switch ($state) {
+        'completed' { $completedRows += $canonical }
+        'failed' { $failedRows += $canonical }
+        'unclassified' { $unclassifiedRows += $canonical }
+    }
 }
-
-$latestActivity = @{}
-foreach ($row in @($raw.B + $raw.C + $raw.D + $raw.R + $raw.S)) {
-    $trace = Get-TraceId $row
-    $time = Get-TimeMs $row
-    if ($trace -and (-not $latestActivity.ContainsKey($trace) -or $time -gt $latestActivity[$trace])) { $latestActivity[$trace] = $time }
+Add-Warning 'duplicate_turn_span' $duplicateTurns 'Multiple lifecycle/token spans were reduced to one trace; token usage was not summed.'
+Add-Warning 'completed_without_token_usage' @($completedRows | Where-Object { -not $_.tokenUsageAvailable }).Count 'Completed turn has no token usage; token totals are partial or unknown.'
+Add-Warning 'failed_turn' $failedRows.Count 'Explicit failed or interrupted terminal outcome; excluded from completed-turn KPI.'
+Add-Warning 'missing_turn_or_root' $unclassifiedRows.Count 'Scoped trace has no recognized terminal signal; age cannot determine its outcome.'
+foreach ($ref in @('A','B','C','D','R','S')) {
+    if (@($raw[$ref] | ForEach-Object { Get-TraceId $_ } | Sort-Object -Unique).Count -ge $MaxTurns) { Add-Warning 'query_limit_reached' 1 "Query $ref reached MaxTurns." }
 }
-$activeIds = @()
-$missingIds = @()
-foreach ($trace in $latestActivity.Keys) {
-    if ($knownTurn.ContainsKey($trace)) { continue }
-    $age = ($toMs - [long]$latestActivity[$trace]) / 1000
-    if ($age -ge 0 -and $age -le $activeGraceSeconds) { $activeIds += $trace } else { $missingIds += $trace }
-}
-Add-Warning 'active_turn' $activeIds.Count 'Recent scoped activity has no completed turn.'
-Add-Warning 'incomplete_turn' $incompleteRows.Count 'Turn completion token attributes are missing.'
-Add-Warning 'missing_turn_or_root' $missingIds.Count 'Scoped activity has no canonical turn.'
-if ($raw.A.Count -ge $MaxTurns) { Add-Warning 'query_limit_reached' 1 'Turn query reached MaxTurns.' }
 
 $rounds = @{}
 $sampling = @{}
@@ -257,13 +281,15 @@ foreach ($row in $completedRows) {
         modelSamplingMs=[math]::Round($samplingMs,3)
         toolDurationMs=[math]::Round($toolDurationMs,3)
         otherMs=[math]::Round([math]::Max($duration-$samplingMs-$toolDurationMs,0),3)
-        inputTokens=$input
-        cachedInputTokens=$cached
-        nonCachedInputTokens=[math]::Max($input-$cached,0)
-        outputTokens=$output
-        reasoningTokens=$reasoning
-        totalTokens=$total
-        cacheHitPct=if($input){[math]::Round(100*$cached/$input,2)}else{0}
+        status='completed'
+        tokenUsageStatus=if($row.tokenUsageAvailable){'available'}else{'missing'}
+        inputTokens=if(Test-Value $row @('codex.turn.token_usage.input_tokens')){$input}else{$null}
+        cachedInputTokens=if(Test-Value $row @('codex.turn.token_usage.cached_input_tokens')){$cached}else{$null}
+        nonCachedInputTokens=if((Test-Value $row @('codex.turn.token_usage.input_tokens')) -and (Test-Value $row @('codex.turn.token_usage.cached_input_tokens'))){[math]::Max($input-$cached,0)}else{$null}
+        outputTokens=if(Test-Value $row @('codex.turn.token_usage.output_tokens')){$output}else{$null}
+        reasoningTokens=if(Test-Value $row @('codex.turn.token_usage.reasoning_output_tokens')){$reasoning}else{$null}
+        totalTokens=if($row.tokenUsageAvailable){$total}else{$null}
+        cacheHitPct=if(-not ((Test-Value $row @('codex.turn.token_usage.input_tokens')) -and (Test-Value $row @('codex.turn.token_usage.cached_input_tokens')))){$null}elseif($input){[math]::Round(100*$cached/$input,2)}else{0}
         toolCalls=@($toolCalls.Keys|Where-Object{$_.StartsWith($trace+':')}).Count
         failures=@($failures.Keys|Where-Object{$_.StartsWith($trace+':') -and $toolCalls.ContainsKey($_)}).Count
         traceId=$trace
@@ -306,34 +332,37 @@ foreach ($group in @($toolCalls.GetEnumerator() | Group-Object { [string](Get-Va
 
 $models = @()
 foreach ($group in @($turns|Group-Object model)) {
-    $modelInput=[long](Get-Sum $group.Group inputTokens)
-    $modelCached=[long](Get-Sum $group.Group cachedInputTokens)
+    $modelInput=Get-ObservedSum $group.Group inputTokens
+    $modelCached=Get-ObservedSum $group.Group cachedInputTokens
     $models += [pscustomobject][ordered]@{
         model=$group.Name; turns=$group.Count
         avgDurationMs=[math]::Round(($group.Group|Measure-Object durationMs -Average).Average,3)
         modelRounds=[int](Get-Sum $group.Group modelRounds)
-        inputTokens=$modelInput; cachedInputTokens=$modelCached; nonCachedInputTokens=$modelInput-$modelCached
-        outputTokens=[long](Get-Sum $group.Group outputTokens)
-        reasoningTokens=[long](Get-Sum $group.Group reasoningTokens)
-        totalTokens=[long](Get-Sum $group.Group totalTokens)
-        cacheHitPct=if($modelInput){[math]::Round(100*$modelCached/$modelInput,2)}else{0}
+        inputTokens=$modelInput; cachedInputTokens=$modelCached; nonCachedInputTokens=Get-ObservedSum $group.Group nonCachedInputTokens
+        outputTokens=Get-ObservedSum $group.Group outputTokens
+        reasoningTokens=Get-ObservedSum $group.Group reasoningTokens
+        totalTokens=Get-ObservedSum $group.Group totalTokens
+        cacheHitPct=if($null -eq $modelInput -or $null -eq $modelCached){$null}elseif($modelInput){[math]::Round(100*$modelCached/$modelInput,2)}else{0}
     }
 }
-$inputTotal=[long](Get-Sum $turns inputTokens)
-$cachedTotal=[long](Get-Sum $turns cachedInputTokens)
-$totalTotal=[long](Get-Sum $turns totalTokens)
+$inputTotal=Get-ObservedSum $turns inputTokens
+$cachedTotal=Get-ObservedSum $turns cachedInputTokens
+$totalTotal=if(@($turns | Where-Object tokenUsageStatus -eq 'available').Count){[long](Get-Sum $turns totalTokens)}else{$null}
 $report=[pscustomobject][ordered]@{
     schemaVersion=$contractVersion; project=$Project; period=$Period
-    snapshot=[pscustomobject][ordered]@{from=$fromValue.ToString('o');asOf=$asOfValue.ToString('o');activeGraceSeconds=$activeGraceSeconds}
+    snapshot=[pscustomobject][ordered]@{from=$fromValue.ToString('o');asOf=$asOfValue.ToString('o')}
     summary=[pscustomobject][ordered]@{
-        completedTurns=$turns.Count;activeTurns=$activeIds.Count;incompleteTurns=$incompleteRows.Count+$missingIds.Count
+        completedTurns=$completedRows.Count;failedTurns=$failedRows.Count;unclassifiedTurns=$unclassifiedRows.Count
+        failedOrUnclassifiedTurns=$failedRows.Count+$unclassifiedRows.Count
+        completedWithoutTokenUsage=@($completedRows | Where-Object { -not $_.tokenUsageAvailable }).Count
         avgDurationMs=if($turns.Count){[math]::Round(($turns|Measure-Object durationMs -Average).Average,3)}else{0}
-        totalTokens=$totalTotal;cacheHitPct=if($inputTotal){[math]::Round(100*$cachedTotal/$inputTotal,2)}else{0}
+        totalTokens=$totalTotal;cacheHitPct=if($null -eq $inputTotal -or $null -eq $cachedTotal){$null}elseif($inputTotal){[math]::Round(100*$cachedTotal/$inputTotal,2)}else{0}
         toolCalls=$toolCalls.Count;toolFailures=$failedCalls.Count
     }
     tokens=[pscustomobject][ordered]@{
-        input=$inputTotal;cachedInput=$cachedTotal;nonCachedInput=$inputTotal-$cachedTotal
-        output=[long](Get-Sum $turns outputTokens);reasoning=[long](Get-Sum $turns reasoningTokens);total=$totalTotal
+        input=$inputTotal;cachedInput=$cachedTotal;nonCachedInput=Get-ObservedSum $turns nonCachedInputTokens
+        output=Get-ObservedSum $turns outputTokens;reasoning=Get-ObservedSum $turns reasoningTokens;total=$totalTotal
+        coverage=if($turns.Count -eq 0 -or @($turns | Where-Object tokenUsageStatus -eq 'available').Count -eq 0){'missing'}elseif(@($turns | Where-Object tokenUsageStatus -eq 'missing').Count){'partial'}else{'available'}
         semantics='cachedInput is included in input; reasoning is included in output'
     }
     coverage=[pscustomobject][ordered]@{
@@ -347,6 +376,9 @@ $report=[pscustomobject][ordered]@{
         byName=@($toolsByName|Sort-Object maxDurationMs -Descending)
         failedCalls=@($failedCalls)
     }
+    turnStates=@(@($completedRows + $failedRows + $unclassifiedRows) | ForEach-Object {
+        [pscustomobject][ordered]@{traceId=Get-TraceId $_;status=$_.turnStatus;tokenUsageStatus=if($_.tokenUsageAvailable){'available'}else{'missing'}}
+    } | Sort-Object traceId)
     turns=$turns
 }
 
@@ -358,9 +390,9 @@ $lines.Add("- Project: $(ConvertTo-Md $Project)")
 $lines.Add("- Snapshot: $($report.snapshot.from) to $($report.snapshot.asOf)")
 $lines.Add("- Contract: $contractVersion")
 $lines.Add('')
-$lines.Add('| Completed | Active | Incomplete | Avg ms | Tokens | Cache hit | Tools | Failures |')
+$lines.Add('| Completed | Failed | Unclassified | Avg ms | Tokens | Cache hit | Tools | Failures |')
 $lines.Add('|---:|---:|---:|---:|---:|---:|---:|---:|')
-$lines.Add("| $($report.summary.completedTurns) | $($report.summary.activeTurns) | $($report.summary.incompleteTurns) | $($report.summary.avgDurationMs) | $($report.summary.totalTokens) | $($report.summary.cacheHitPct)% | $($report.summary.toolCalls) | $($report.summary.toolFailures) |")
+$lines.Add("| $($report.summary.completedTurns) | $($report.summary.failedTurns) | $($report.summary.unclassifiedTurns) | $($report.summary.avgDurationMs) | $($report.summary.totalTokens) | $($report.summary.cacheHitPct)% | $($report.summary.toolCalls) | $($report.summary.toolFailures) |")
 $lines.Add('')
 $lines.Add('Cached input is included in input; reasoning is included in output.')
 $lines.Add('')
@@ -373,7 +405,12 @@ $lines.Add('| Tool | Calls | Failures | p50 ms | p95 ms | max ms | Trace ID |')
 $lines.Add('|---|---:|---:|---:|---:|---:|---|')
 foreach($t in $report.tools.byName){$lines.Add("| $(ConvertTo-Md $t.tool) | $($t.calls) | $($t.failures) | $($t.p50DurationMs) | $($t.p95DurationMs) | $($t.maxDurationMs) | $($t.slowestTraceId) |")}
 $lines.Add('')
-$lines.Add('## Turns')
+$lines.Add('## Turn states')
+$lines.Add('| Trace ID | Status | Token usage |')
+$lines.Add('|---|---|---|')
+foreach($t in $report.turnStates){$lines.Add("| $($t.traceId) | $($t.status) | $($t.tokenUsageStatus) |")}
+$lines.Add('')
+$lines.Add('## Completed turns')
 $lines.Add('| Time | Model | Duration | Rounds | Sampling | Tools ms | Other | In | Cached | Non-cached | Out | Reasoning | Total | Calls | Failures | Trace ID |')
 $lines.Add('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|')
 foreach($t in $turns){$lines.Add("| $($t.timestamp) | $(ConvertTo-Md $t.model) | $($t.durationMs) | $($t.modelRounds) | $($t.modelSamplingMs) | $($t.toolDurationMs) | $($t.otherMs) | $($t.inputTokens) | $($t.cachedInputTokens) | $($t.nonCachedInputTokens) | $($t.outputTokens) | $($t.reasoningTokens) | $($t.totalTokens) | $($t.toolCalls) | $($t.failures) | $($t.traceId) |")}

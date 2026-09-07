@@ -16,7 +16,7 @@
       {
         "current": {
           "isNone": true,
-          "text": "⚠ Project not selected",
+          "text": "\u26a0 Project not selected",
           "value": ""
         },
         "datasource": {
@@ -49,7 +49,7 @@
   "timezone": "browser",
   "title": "Codex Overview",
   "uid": "codex-overview",
-  "version": 21,
+  "version": 22,
   "panels": [
     {
       "datasource": {
@@ -58,7 +58,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "noValue": "—",
+          "noValue": "\u2014",
           "unit": "short",
           "displayName": "Completed turns"
         },
@@ -77,7 +77,7 @@
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
-            "sum"
+            "lastNotNull"
           ],
           "fields": "",
           "values": false
@@ -86,21 +86,71 @@
       },
       "targets": [
         {
+          "refId": "P",
           "datasource": {
             "type": "tempo",
             "uid": "tempo"
           },
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | count_over_time()",
-          "queryType": "traceql",
-          "refId": "A",
-          "exemplars": 0,
-          "step": "2m"
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+        },
+        {
+          "refId": "X",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "{ span.cwd = \"${cwd:regex}\" }"
+        },
+        {
+          "refId": "U",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }"
+        },
+        {
+          "refId": "Z",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "type": "sql",
+          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden) SELECT SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS `Completed turns` FROM states",
+          "hide": false
         }
       ],
       "title": "Completed turns",
       "type": "stat",
-      "description": "Distinct completed turn spans inside the project-scoped snapshot. Active/incomplete traces are excluded and surfaced below."
+      "description": "Explicit terminal outcome joined to Project cwd by Trace ID. Legacy token-bearing session_task.turn is a compatibility fallback. Failure wins; no age-based completion. Search bound: 500 traces / 100 spans per span set."
     },
     {
       "datasource": {
@@ -110,7 +160,7 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 1,
-          "noValue": "—",
+          "noValue": "\u2014",
           "unit": "s",
           "displayName": "Avg duration"
         },
@@ -138,72 +188,71 @@
       },
       "targets": [
         {
+          "refId": "P",
           "datasource": {
             "type": "tempo",
             "uid": "tempo"
           },
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span:duration)",
-          "queryType": "traceql",
-          "refId": "A",
-          "exemplars": 0,
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
           "hide": true,
-          "step": "2m"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
         },
         {
+          "refId": "F",
           "datasource": {
             "type": "tempo",
             "uid": "tempo"
           },
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | count_over_time()",
-          "queryType": "traceql",
-          "refId": "B",
-          "exemplars": 0,
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
           "hide": true,
-          "step": "2m"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
         },
         {
+          "refId": "X",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "{ span.cwd = \"${cwd:regex}\" }"
+        },
+        {
+          "refId": "U",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }"
+        },
+        {
+          "refId": "Z",
           "datasource": {
             "type": "__expr__",
             "uid": "__expr__"
           },
-          "refId": "C",
-          "type": "reduce",
-          "expression": "A",
-          "reducer": "sum",
-          "settings": {
-            "mode": "dropNN"
-          },
-          "hide": true
-        },
-        {
-          "datasource": {
-            "type": "__expr__",
-            "uid": "__expr__"
-          },
-          "refId": "D",
-          "type": "reduce",
-          "expression": "B",
-          "reducer": "sum",
-          "settings": {
-            "mode": "dropNN"
-          },
-          "hide": true
-        },
-        {
-          "datasource": {
-            "type": "__expr__",
-            "uid": "__expr__"
-          },
-          "refId": "E",
-          "type": "math",
-          "expression": "$C / $D"
+          "type": "sql",
+          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden) SELECT AVG(duration) / 1000000000 AS `Avg duration` FROM states WHERE status = 'completed'",
+          "hide": false
         }
       ],
       "title": "Avg duration",
       "type": "stat",
-      "description": "Average canonical completed-turn duration."
+      "description": "Explicit terminal outcome joined to Project cwd by Trace ID. Legacy token-bearing session_task.turn is a compatibility fallback. Failure wins; no age-based completion. Search bound: 500 traces / 100 spans per span set."
     },
     {
       "datasource": {
@@ -212,7 +261,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "noValue": "—",
+          "noValue": "\u2014",
           "unit": "short",
           "displayName": "Total tokens"
         },
@@ -245,7 +294,7 @@
             "uid": "tempo"
           },
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\")",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\")",
           "queryType": "traceql",
           "refId": "A",
           "exemplars": 0,
@@ -254,7 +303,7 @@
       ],
       "title": "Total tokens",
       "type": "stat",
-      "description": "Completed-turn total tokens; totals come only from canonical turn attributes."
+      "description": "Completed-turn total tokens; totals come only from canonical turn attributes. Available token-bearing lifecycle spans only; missing tokens are reported separately in Turn status and coverage."
     },
     {
       "datasource": {
@@ -264,7 +313,7 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 1,
-          "noValue": "—",
+          "noValue": "\u2014",
           "unit": "percent",
           "displayName": "Cache hit %"
         },
@@ -298,7 +347,7 @@
           },
           "hide": true,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\")",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\")",
           "queryType": "traceql",
           "refId": "A",
           "exemplars": 0,
@@ -311,7 +360,7 @@
           },
           "hide": true,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\")",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\")",
           "queryType": "traceql",
           "refId": "B",
           "exemplars": 0,
@@ -357,7 +406,7 @@
       ],
       "title": "Cache hit %",
       "type": "stat",
-      "description": "100 × cached input / input for completed turns. Cached input is included in input."
+      "description": "100 \u00d7 cached input / input for completed turns. Cached input is included in input. Available token-bearing lifecycle spans only; missing tokens are reported separately in Turn status and coverage."
     },
     {
       "datasource": {
@@ -366,7 +415,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "noValue": "—",
+          "noValue": "\u2014",
           "unit": "short",
           "displayName": "Tool calls"
         },
@@ -420,7 +469,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "noValue": "—",
+          "noValue": "\u2014",
           "unit": "short",
           "displayName": "Tool failures",
           "thresholds": {
@@ -442,7 +491,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "—",
+                  "text": "\u2014",
                   "color": "gray"
                 }
               }
@@ -502,14 +551,14 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "## ${cwd:text}\n\n**from:** `${__from:date:iso}`  \n**as_of:** `${__to:date:iso}`\n\nKPI include completed turns only and stay unset while no project is selected. For a repeatable snapshot, select an **absolute** dashboard time range; auto-refresh remains 10s but the bounds do not move."
+        "content": "## ${cwd:text}\n\n**from:** `${__from:date:iso}`  \n**as_of:** `${__to:date:iso}`\n\nKPI include completed turns only and stay unset while no project is selected. For a repeatable snapshot, select an **absolute** dashboard time range; auto-refresh remains 10s but the bounds do not move.\n\n**Status:** explicit terminal outcome, independent of tokens. `missing_turn_or_root` means unclassified, never zero completed activity. Legacy completion and bounded-search limits are documented in METRIC_CONTRACT.md."
       }
     },
     {
       "id": 17,
       "type": "stat",
-      "title": "Incomplete exported turns",
-      "description": "Exported turn spans without completion token attributes. In-flight spans are not exported; active candidates are inferred by the report with a 120s grace window at the same as_of.",
+      "title": "Turn status and coverage",
+      "description": "Explicit terminal outcome joined to Project cwd by Trace ID. Legacy token-bearing session_task.turn is a compatibility fallback. Failure wins; no age-based completion. Search bound: 500 traces / 100 spans per span set.",
       "datasource": {
         "type": "tempo",
         "uid": "tempo"
@@ -523,8 +572,24 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 0,
-          "noValue": "—",
-          "displayName": "Incomplete exported turns"
+          "noValue": "\u2014",
+          "displayName": "${__field.name}",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -534,25 +599,75 @@
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
-            "sum"
+            "lastNotNull"
           ],
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "value_and_name"
       },
       "targets": [
         {
+          "refId": "P",
           "datasource": {
             "type": "tempo",
             "uid": "tempo"
           },
-          "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && span.\"codex.turn.token_usage.total_tokens\" = nil }) | { name = \"session_task.turn\" && span.\"codex.turn.token_usage.total_tokens\" = nil } | count_over_time()",
-          "queryType": "traceql",
-          "refId": "A",
-          "exemplars": 0,
-          "step": "2m"
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+        },
+        {
+          "refId": "X",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "{ span.cwd = \"${cwd:regex}\" }"
+        },
+        {
+          "refId": "U",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }"
+        },
+        {
+          "refId": "Z",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "type": "sql",
+          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden) SELECT SUM(CASE WHEN status <> 'completed' THEN 1 ELSE 0 END) AS `Failed / unclassified`, SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS `Failed turns`, SUM(CASE WHEN status = 'unclassified' THEN 1 ELSE 0 END) AS `missing_turn_or_root`, SUM(CASE WHEN status = 'completed' AND token_status = 'missing' THEN 1 ELSE 0 END) AS `Completed without token usage` FROM states",
+          "hide": false
         }
       ]
     },
@@ -587,54 +702,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "cwd"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "cwd"
-              },
-              {
-                "id": "custom.width",
-                "value": 210
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "model"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Model"
-              },
-              {
-                "id": "custom.width",
-                "value": 120
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "codex.turn.reasoning_effort"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Reasoning effort"
-              },
-              {
-                "id": "custom.width",
-                "value": 120
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "duration"
             },
             "properties": [
@@ -653,54 +720,6 @@
               {
                 "id": "custom.width",
                 "value": 110
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "codex.turn.token_usage.input_tokens"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Input tokens"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "codex.turn.token_usage.output_tokens"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Output tokens"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "codex.turn.token_usage.reasoning_output_tokens"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Reasoning tokens"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "codex.turn.token_usage.cached_input_tokens"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Cached tokens"
               }
             ]
           },
@@ -775,40 +794,24 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "non_cached_input_tokens"
+              "options": "status"
             },
             "properties": [
               {
                 "id": "displayName",
-                "value": "Non-cached input"
+                "value": "Turn status"
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "codex.turn.token_usage.total_tokens"
+              "options": "token_status"
             },
             "properties": [
               {
                 "id": "displayName",
-                "value": "Total tokens"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "cache_hit_ratio"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Cache hit"
-              },
-              {
-                "id": "unit",
-                "value": "percentunit"
+                "value": "Token usage"
               }
             ]
           }
@@ -833,6 +836,58 @@
       },
       "targets": [
         {
+          "refId": "P",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+        },
+        {
+          "refId": "X",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "{ span.cwd = \"${cwd:regex}\" }"
+        },
+        {
+          "refId": "U",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }"
+        },
+        {
           "datasource": {
             "type": "tempo",
             "uid": "tempo"
@@ -843,19 +898,6 @@
           "queryType": "traceqlSearch",
           "refId": "B",
           "spss": 100,
-          "tableType": "spans"
-        },
-        {
-          "datasource": {
-            "type": "tempo",
-            "uid": "tempo"
-          },
-          "hide": true,
-          "limit": 200,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | select(span.model, span.\"codex.turn.reasoning_effort\", span.\"codex.turn.token_usage.input_tokens\", span.\"codex.turn.token_usage.output_tokens\", span.\"codex.turn.token_usage.reasoning_output_tokens\", span.\"codex.turn.token_usage.cached_input_tokens\", span.\"codex.turn.token_usage.total_tokens\")",
-          "queryType": "traceqlSearch",
-          "refId": "A",
-          "spss": 1,
           "tableType": "spans"
         },
         {
@@ -885,76 +927,20 @@
           "tableType": "spans"
         },
         {
+          "refId": "E",
           "datasource": {
             "type": "__expr__",
             "uid": "__expr__"
           },
-          "expression": "WITH rounds AS (SELECT traceIdHidden AS trace_id, COUNT(*) AS model_rounds FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden AS trace_id, COUNT(*) AS tool_calls FROM C GROUP BY traceIdHidden), failures AS (SELECT traceIdHidden AS trace_id, COUNT(*) AS failures FROM D GROUP BY traceIdHidden) SELECT A.*, '${cwd:regex}' AS cwd, COALESCE(rounds.model_rounds, 0) AS model_rounds, COALESCE(tools.tool_calls, 0) AS tool_calls, COALESCE(failures.failures, 0) AS failures FROM A LEFT JOIN rounds ON rounds.trace_id = A.traceIdHidden LEFT JOIN tools ON tools.trace_id = A.traceIdHidden LEFT JOIN failures ON failures.trace_id = A.traceIdHidden ORDER BY A.time DESC",
-          "refId": "E",
-          "type": "sql"
+          "type": "sql",
+          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden) , rounds AS (SELECT traceIdHidden, COUNT(*) AS model_rounds FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden, COUNT(*) AS tool_calls FROM C GROUP BY traceIdHidden), failures AS (SELECT traceIdHidden, COUNT(*) AS failures FROM D GROUP BY traceIdHidden) SELECT states.time, states.duration, states.traceIdHidden, states.status, states.token_status, COALESCE(rounds.model_rounds, 0) AS model_rounds, COALESCE(tools.tool_calls, 0) AS tool_calls, COALESCE(failures.failures, 0) AS failures FROM states LEFT JOIN rounds ON states.traceIdHidden = rounds.traceIdHidden LEFT JOIN tools ON states.traceIdHidden = tools.traceIdHidden LEFT JOIN failures ON states.traceIdHidden = failures.traceIdHidden ORDER BY states.time DESC",
+          "hide": false
         }
       ],
-      "transformations": [
-        {
-          "id": "calculateField",
-          "options": {
-            "alias": "non_cached_input_tokens",
-            "binary": {
-              "left": "codex.turn.token_usage.input_tokens",
-              "operator": "-",
-              "right": "codex.turn.token_usage.cached_input_tokens"
-            },
-            "mode": "binary",
-            "replaceFields": false
-          }
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "alias": "cache_hit_ratio",
-            "binary": {
-              "left": "codex.turn.token_usage.cached_input_tokens",
-              "operator": "/",
-              "right": "codex.turn.token_usage.input_tokens"
-            },
-            "mode": "binary",
-            "replaceFields": false
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "name": true,
-              "spanID": true,
-              "traceName": true,
-              "traceService": true
-            },
-            "indexByName": {
-              "time": 0,
-              "cwd": 1,
-              "model": 2,
-              "codex.turn.reasoning_effort": 3,
-              "duration": 4,
-              "codex.turn.token_usage.input_tokens": 5,
-              "codex.turn.token_usage.output_tokens": 8,
-              "codex.turn.token_usage.reasoning_output_tokens": 9,
-              "codex.turn.token_usage.cached_input_tokens": 6,
-              "model_rounds": 12,
-              "tool_calls": 13,
-              "failures": 14,
-              "traceIdHidden": 15,
-              "non_cached_input_tokens": 7,
-              "codex.turn.token_usage.total_tokens": 10,
-              "cache_hit_ratio": 11
-            },
-            "renameByName": {}
-          }
-        }
-      ],
+      "transformations": [],
       "title": "Turns",
       "type": "table",
-      "description": "Completed turns only. Rounds, tools, and failures are joined by Trace ID; no strict parent/descendant assumption."
+      "description": "All observed project traces, including failed and unclassified. Missing terminal signal is never a successful zero. Token detail remains in Tokens by model and the report. Table tool/round previews are bounded to 100 spans per set."
     },
     {
       "datasource": {
@@ -980,7 +966,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Duration · ${__field.labels[\"span.model\"]}"
+                "value": "Duration \u00b7 ${__field.labels[\"span.model\"]}"
               }
             ]
           }
@@ -1015,14 +1001,14 @@
             "uid": "tempo"
           },
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | avg_over_time(span:duration) by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | avg_over_time(span:duration) by (span.model)",
           "queryType": "traceql",
           "refId": "A"
         }
       ],
       "title": "Duration by model",
       "type": "timeseries",
-      "description": "Completed turns only; model is read from the canonical turn span."
+      "description": "Completed turns only; model is read from the canonical turn span. Available token-bearing lifecycle spans only; missing tokens are reported separately in Turn status and coverage."
     },
     {
       "datasource": {
@@ -1048,7 +1034,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Input · ${__field.labels[\"span.model\"]}"
+                "value": "Input \u00b7 ${__field.labels[\"span.model\"]}"
               }
             ]
           },
@@ -1060,7 +1046,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Cached input · ${__field.labels[\"span.model\"]}"
+                "value": "Cached input \u00b7 ${__field.labels[\"span.model\"]}"
               }
             ]
           },
@@ -1072,7 +1058,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Output · ${__field.labels[\"span.model\"]}"
+                "value": "Output \u00b7 ${__field.labels[\"span.model\"]}"
               }
             ]
           },
@@ -1084,7 +1070,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Reasoning · ${__field.labels[\"span.model\"]}"
+                "value": "Reasoning \u00b7 ${__field.labels[\"span.model\"]}"
               }
             ]
           },
@@ -1096,7 +1082,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Total · ${__field.labels[\"span.model\"]}"
+                "value": "Total \u00b7 ${__field.labels[\"span.model\"]}"
               }
             ]
           },
@@ -1108,7 +1094,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Non-cached input · ${__field.labels[\"span.model\"]}"
+                "value": "Non-cached input \u00b7 ${__field.labels[\"span.model\"]}"
               }
             ]
           }
@@ -1143,7 +1129,7 @@
           },
           "exemplars": 0,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\") by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\") by (span.model)",
           "queryType": "traceql",
           "refId": "A"
         },
@@ -1154,7 +1140,7 @@
           },
           "exemplars": 0,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\") by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\") by (span.model)",
           "queryType": "traceql",
           "refId": "B"
         },
@@ -1165,7 +1151,7 @@
           },
           "exemplars": 0,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.output_tokens\") by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.output_tokens\") by (span.model)",
           "queryType": "traceql",
           "refId": "C"
         },
@@ -1176,7 +1162,7 @@
           },
           "exemplars": 0,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.reasoning_output_tokens\") by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.reasoning_output_tokens\") by (span.model)",
           "queryType": "traceql",
           "refId": "D"
         },
@@ -1187,7 +1173,7 @@
           },
           "exemplars": 0,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (span.model)",
           "queryType": "traceql",
           "refId": "E"
         },
@@ -1203,7 +1189,7 @@
       ],
       "title": "Tokens by model",
       "type": "timeseries",
-      "description": "Completed-turn tokens by model. Cached is included in input; reasoning is included in output; non-cached=input-cached."
+      "description": "Completed-turn tokens by model. Cached is included in input; reasoning is included in output; non-cached=input-cached. Available token-bearing lifecycle spans only; missing tokens are reported separately in Turn status and coverage."
     },
     {
       "datasource": {
@@ -1329,44 +1315,84 @@
       },
       "targets": [
         {
+          "refId": "P",
           "datasource": {
             "type": "tempo",
             "uid": "tempo"
           },
-          "hide": true,
-          "limit": 500,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"responses_websocket.stream_request\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"responses_websocket.stream_request\" }",
           "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+        },
+        {
+          "refId": "X",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "{ span.cwd = \"${cwd:regex}\" }"
+        },
+        {
+          "refId": "U",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }"
+        },
+        {
           "refId": "A",
-          "spss": 100,
-          "tableType": "spans"
-        },
-        {
           "datasource": {
             "type": "tempo",
             "uid": "tempo"
           },
-          "hide": true,
-          "limit": 500,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }",
           "queryType": "traceqlSearch",
-          "refId": "B",
+          "tableType": "spans",
+          "limit": 500,
           "spss": 100,
-          "tableType": "spans"
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"responses_websocket.stream_request\" }) | { name = \"responses_websocket.stream_request\" }"
         },
         {
+          "refId": "C",
           "datasource": {
             "type": "__expr__",
             "uid": "__expr__"
           },
-          "expression": "WITH turns AS (SELECT traceIdHidden AS trace_id, MAX(time) AS time FROM B GROUP BY traceIdHidden), rounds AS (SELECT traceIdHidden AS trace_id, COUNT(*) AS rounds FROM A GROUP BY traceIdHidden) SELECT turns.time AS time, AVG(COALESCE(rounds.rounds, 0)) AS `Model rounds / turn` FROM turns LEFT JOIN rounds ON rounds.trace_id = turns.trace_id GROUP BY turns.time ORDER BY turns.time",
-          "refId": "C",
-          "type": "sql"
+          "type": "sql",
+          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden) , rounds AS (SELECT traceIdHidden, COUNT(*) AS rounds FROM A GROUP BY traceIdHidden) SELECT states.time AS time, AVG(COALESCE(rounds.rounds, 0)) AS `Model rounds / turn` FROM states LEFT JOIN rounds ON states.traceIdHidden = rounds.traceIdHidden WHERE states.status = 'completed' GROUP BY states.time ORDER BY states.time",
+          "hide": false
         }
       ],
       "title": "Model rounds / turn",
       "type": "timeseries",
-      "description": "WebSocket model rounds per completed turn, joined by Trace ID and plotted at turn start. Turns without rounds count as zero; turns starting at the same timestamp are averaged. Search is limited to 500 traces and 100 spans per trace; larger results may undercount."
+      "description": "Rounds per completed trace, including completed turns without tokens or rounds. Shared explicit lifecycle classification; bounded 500 traces / 100 spans per span set."
     },
     {
       "datasource": {
@@ -1405,7 +1431,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "—",
+                  "text": "\u2014",
                   "color": "gray"
                 }
               }
@@ -1603,17 +1629,56 @@
       },
       "targets": [
         {
+          "refId": "P",
           "datasource": {
             "type": "tempo",
             "uid": "tempo"
           },
-          "hide": true,
-          "limit": 200,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }",
           "queryType": "traceqlSearch",
-          "refId": "A",
-          "spss": 1,
-          "tableType": "spans"
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+        },
+        {
+          "refId": "X",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "{ span.cwd = \"${cwd:regex}\" }"
+        },
+        {
+          "refId": "U",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }"
         },
         {
           "datasource": {
@@ -1642,13 +1707,14 @@
           "tableType": "spans"
         },
         {
+          "refId": "D",
           "datasource": {
             "type": "__expr__",
             "uid": "__expr__"
           },
-          "expression": "WITH model AS (SELECT traceIdHidden AS trace_id, SUM(duration) AS model_sampling_ns FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden AS trace_id, SUM(duration) AS tool_execution_ns FROM C GROUP BY traceIdHidden) SELECT A.*, COALESCE(model.model_sampling_ns, 0) AS model_sampling_ns, COALESCE(tools.tool_execution_ns, 0) AS tool_execution_ns, CASE WHEN A.duration - COALESCE(model.model_sampling_ns, 0) - COALESCE(tools.tool_execution_ns, 0) > 0 THEN A.duration - COALESCE(model.model_sampling_ns, 0) - COALESCE(tools.tool_execution_ns, 0) ELSE 0 END AS other_overhead_ns FROM A LEFT JOIN model ON model.trace_id = A.traceIdHidden LEFT JOIN tools ON tools.trace_id = A.traceIdHidden ORDER BY A.time DESC",
-          "refId": "D",
-          "type": "sql"
+          "type": "sql",
+          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden) , model AS (SELECT traceIdHidden, SUM(duration) AS model_sampling_ns FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden, SUM(duration) AS tool_execution_ns FROM C GROUP BY traceIdHidden) SELECT states.time, states.duration, states.traceIdHidden, COALESCE(model.model_sampling_ns, 0) AS model_sampling_ns, COALESCE(tools.tool_execution_ns, 0) AS tool_execution_ns, CASE WHEN states.duration - COALESCE(model.model_sampling_ns, 0) - COALESCE(tools.tool_execution_ns, 0) > 0 THEN states.duration - COALESCE(model.model_sampling_ns, 0) - COALESCE(tools.tool_execution_ns, 0) ELSE 0 END AS other_overhead_ns FROM states LEFT JOIN model ON states.traceIdHidden = model.traceIdHidden LEFT JOIN tools ON states.traceIdHidden = tools.traceIdHidden WHERE states.status = 'completed' ORDER BY states.time DESC",
+          "hide": false
         }
       ],
       "transformations": [
@@ -1876,7 +1942,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Calls · ${__field.labels[\"event.tool_name\"]}"
+                "value": "Calls \u00b7 ${__field.labels[\"event.tool_name\"]}"
               }
             ]
           },
@@ -1888,7 +1954,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Failures · ${__field.labels[\"event.tool_name\"]}"
+                "value": "Failures \u00b7 ${__field.labels[\"event.tool_name\"]}"
               }
             ]
           }
@@ -1959,7 +2025,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "p50 · ${__field.labels[\"event.tool_name\"]}"
+                "value": "p50 \u00b7 ${__field.labels[\"event.tool_name\"]}"
               }
             ]
           },
@@ -1971,7 +2037,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "p95 · ${__field.labels[\"event.tool_name\"]}"
+                "value": "p95 \u00b7 ${__field.labels[\"event.tool_name\"]}"
               }
             ]
           },
@@ -1983,7 +2049,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Max · ${__field.labels[\"event.tool_name\"]}"
+                "value": "Max \u00b7 ${__field.labels[\"event.tool_name\"]}"
               }
             ]
           }

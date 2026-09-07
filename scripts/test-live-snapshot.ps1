@@ -1,0 +1,59 @@
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory=$true)][string]$Project,
+    [ValidatePattern('^\d+(m|h|d|w)$')][string]$Period = '1h',
+    [Parameter(Mandatory=$true)][string]$AsOf,
+    [string]$GrafanaBaseUrl = 'http://127.0.0.1:3000'
+)
+# Read-only: no trace, log, dashboard or datasource writes.
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+$root = Split-Path -Parent $PSScriptRoot
+$report = & (Join-Path $PSScriptRoot 'codex-performance-report.ps1') -Project $Project -Period $Period -AsOf $AsOf -GrafanaBaseUrl $GrafanaBaseUrl | ConvertFrom-Json
+$dashboard = Get-Content -Raw (Join-Path $root 'grafana/dashboards/codex-overview.json') | ConvertFrom-Json
+$from = [string][DateTimeOffset]::Parse($report.snapshot.from).ToUnixTimeMilliseconds()
+$to = [string][DateTimeOffset]::Parse($report.snapshot.asOf).ToUnixTimeMilliseconds()
+$literal = $Project.Replace('\','\\').Replace('"','\"')
+$panelResults = @{}
+foreach ($panel in @($dashboard.panels | Where-Object { $_.PSObject.Properties['targets'] })) {
+    foreach ($target in $panel.targets) {
+        if ($target.PSObject.Properties['query']) { $target.query = $target.query.Replace('${cwd:regex}',$literal) }
+    }
+    $body = @{from=$from;to=$to;queries=@($panel.targets)} | ConvertTo-Json -Depth 20
+    try { $response = Invoke-RestMethod -Uri "$GrafanaBaseUrl/api/ds/query" -Method Post -ContentType 'application/json' -Body $body }
+    catch { throw "Dashboard panel $($panel.id) failed: $($_.Exception.Message)" }
+    foreach ($result in $response.results.PSObject.Properties) {
+        if ($result.Value.status -notin @(200,206)) { throw "Dashboard panel $($panel.id)/$($result.Name) returned $($result.Value.status)." }
+    }
+    $panelResults[$panel.id] = $response
+}
+'All dashboard target queries execute on the fixed live snapshot: PASS'
+if ($report.turnStates.Count -eq 0) {
+    'No scoped live traces: non-empty numeric parity was NOT verified.'
+    return
+}
+function Get-FirstValue([int]$PanelId, [string]$Ref, [int]$Column=0) {
+    $frames = @($panelResults[$PanelId].results.$Ref.frames)
+    if ($frames.Count -eq 0 -or $frames[0].data.values[$Column].Count -eq 0) { return $null }
+    return $frames[0].data.values[$Column][0]
+}
+function Assert-Number($Actual, $Expected, [string]$Name) {
+    if ($null -eq $Actual -and $null -eq $Expected) { return }
+    if ($null -eq $Actual -or $null -eq $Expected -or [math]::Abs([double]$Actual-[double]$Expected) -gt 0.0001) { throw "$Name mismatch: dashboard=$Actual; report=$Expected." }
+}
+Assert-Number (Get-FirstValue 1 'Z') $report.summary.completedTurns 'Completed turns'
+Assert-Number (Get-FirstValue 17 'Z' 0) $report.summary.failedOrUnclassifiedTurns 'Failed / unclassified'
+Assert-Number (Get-FirstValue 17 'Z' 1) $report.summary.failedTurns 'Failed turns'
+Assert-Number (Get-FirstValue 17 'Z' 2) $report.summary.unclassifiedTurns 'missing_turn_or_root'
+Assert-Number (Get-FirstValue 17 'Z' 3) $report.summary.completedWithoutTokenUsage 'Completed without tokens'
+foreach ($id in @(5,6)) {
+    $sum = 0
+    foreach ($frame in @($panelResults[$id].results.A.frames)) {
+        for ($j=0;$j -lt $frame.schema.fields.Count;$j++) {
+            if ($frame.schema.fields[$j].type -eq 'number') { $sum += ($frame.data.values[$j] | Measure-Object -Sum).Sum }
+        }
+    }
+    $expected = if ($id -eq 5) { $report.summary.toolCalls } else { $report.summary.toolFailures }
+    Assert-Number $sum $expected "Tool KPI $id"
+}
+"Live dashboard/report parity: completed=$($report.summary.completedTurns), failed/unclassified=$($report.summary.failedOrUnclassifiedTurns), calls=$($report.summary.toolCalls), tool failures=$($report.summary.toolFailures) PASS"

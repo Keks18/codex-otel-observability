@@ -1,0 +1,178 @@
+{
+  "results": {
+    "A": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": {
+            "fields": [
+              {
+                "name": "time"
+              },
+              {
+                "name": "duration"
+              },
+              {
+                "name": "traceIdHidden"
+              }
+            ]
+          },
+          "data": {
+            "values": [
+              [],
+              [],
+              []
+            ]
+          }
+        }
+      ]
+    },
+    "B": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": {
+            "fields": [
+              {
+                "name": "time"
+              },
+              {
+                "name": "duration"
+              },
+              {
+                "name": "traceIdHidden"
+              }
+            ]
+          },
+          "data": {
+            "values": [
+              [
+                1788508200000,
+                1788508300000,
+                1788508400000
+              ],
+              [
+                1000000,
+                1000000,
+                1000000
+              ],
+              [
+                "11111111111111111111111111111111",
+                "22222222222222222222222222222222",
+                "33333333333333333333333333333333"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    "C": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": {
+            "fields": [
+              {
+                "name": "time"
+              },
+              {
+                "name": "duration"
+              },
+              {
+                "name": "traceIdHidden"
+              }
+            ]
+          },
+          "data": {
+            "values": [
+              [],
+              [],
+              []
+            ]
+          }
+        }
+      ]
+    },
+    "D": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": {
+            "fields": [
+              {
+                "name": "time"
+              },
+              {
+                "name": "duration"
+              },
+              {
+                "name": "traceIdHidden"
+              }
+            ]
+          },
+          "data": {
+            "values": [
+              [],
+              [],
+              []
+            ]
+          }
+        }
+      ]
+    },
+    "R": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": {
+            "fields": [
+              {
+                "name": "time"
+              },
+              {
+                "name": "duration"
+              },
+              {
+                "name": "traceIdHidden"
+              }
+            ]
+          },
+          "data": {
+            "values": [
+              [],
+              [],
+              []
+            ]
+          }
+        }
+      ]
+    },
+    "S": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": {
+            "fields": [
+              {
+                "name": "time"
+              },
+              {
+                "name": "duration"
+              },
+              {
+                "name": "traceIdHidden"
+              }
+            ]
+          },
+          "data": {
+            "values": [
+              [],
+              [],
+              []
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

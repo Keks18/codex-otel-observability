@@ -16,11 +16,11 @@ function Assert-Equal($Actual, $Expected, [string]$Name) {
     if ($Actual -ne $Expected) { throw "$Name expected '$Expected', got '$Actual'." }
 }
 
-Assert-Equal $json1.schemaVersion '2.0' 'schemaVersion'
+Assert-Equal $json1.schemaVersion '3.0' 'schemaVersion'
 Assert-Equal $json1.snapshot.asOf '2026-09-04T08:00:00.0000000+00:00' 'asOf'
 Assert-Equal $json1.summary.completedTurns 1 'completed turns'
-Assert-Equal $json1.summary.activeTurns 1 'active turns'
-Assert-Equal $json1.summary.incompleteTurns 2 'incomplete turns'
+Assert-Equal $json1.summary.failedTurns 0 'failed turns'
+Assert-Equal $json1.summary.unclassifiedTurns 3 'unclassified turns'
 Assert-Equal $json1.summary.totalTokens 120 'total tokens'
 Assert-Equal $json1.tokens.input 100 'input tokens'
 Assert-Equal $json1.tokens.cachedInput 40 'cached input'
@@ -74,13 +74,13 @@ foreach ($source in @('event.tool_name','tool_name','span.tool_name','codex.tool
 }
 
 $warningCodes = @($json1.coverage.warnings | ForEach-Object code)
-foreach ($code in @('oversized_or_partial','duplicate_turn_span','active_turn','incomplete_turn','missing_turn_or_root','duplicate_tool_call')) {
+foreach ($code in @('oversized_or_partial','duplicate_turn_span','legacy_completion_signal','missing_turn_or_root','duplicate_tool_call')) {
     if ($code -notin $warningCodes) { throw "Missing expected coverage warning '$code'." }
 }
 Assert-Equal ($json1 | ConvertTo-Json -Depth 12) ($json2 | ConvertTo-Json -Depth 12) 'stable snapshot'
 
 $markdown = & $reportScript -Project 'fixture://project' -Period 1h -AsOf $asOf -FixturePath $fixture -Format markdown
-if ($markdown -notmatch 'Completed.*Active.*Incomplete') { throw 'Markdown summary is missing completeness columns.' }
+if ($markdown -notmatch 'Completed.*Failed.*Unclassified') { throw 'Markdown summary is missing completeness columns.' }
 if ($markdown -notmatch 'Non-cached') { throw 'Markdown report is missing token semantics.' }
 if ($markdown -match 'nested implementation failure') { throw 'Nested failure leaked into Markdown.' }
 

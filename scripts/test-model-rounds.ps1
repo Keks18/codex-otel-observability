@@ -14,17 +14,17 @@ $end = [DateTimeOffset]::Parse($asOf)
 
 function ConvertTo-SqlRows($Rows) {
     if (@($Rows).Count -eq 0) {
-        return "SELECT CAST(NULL AS CHAR) AS traceIdHidden, CAST(NULL AS DATETIME) AS time WHERE 1 = 0"
+        return "SELECT CAST(NULL AS CHAR) AS traceIdHidden, CAST(NULL AS DATETIME) AS time, CAST(NULL AS DOUBLE) AS duration WHERE 1 = 0"
     }
     (@($Rows | ForEach-Object {
         $trace = ([string]$_.trace).Replace("'", "''")
         $time = [DateTimeOffset]::FromUnixTimeMilliseconds([long]$_.time).UtcDateTime.ToString('yyyy-MM-dd HH:mm:ss.fff', [Globalization.CultureInfo]::InvariantCulture)
-        "SELECT '$trace' AS traceIdHidden, CAST('$time' AS DATETIME) AS time"
+        "SELECT '$trace' AS traceIdHidden, CAST('$time' AS DATETIME) AS time, 1000000000 AS duration"
     }) -join ' UNION ALL ')
 }
 
 function Invoke-RoundsCase([string]$Name, $Rounds, $Turns, [double[]]$Expected) {
-    $sql = 'WITH A AS (' + (ConvertTo-SqlRows $Rounds) + '), B AS (' + (ConvertTo-SqlRows $Turns) + '), ' + ($expression -replace '^WITH\s+', '')
+    $sql = 'WITH A AS (' + (ConvertTo-SqlRows $Rounds) + '), P AS (' + (ConvertTo-SqlRows $Turns) + '), X AS (SELECT * FROM P), U AS (SELECT * FROM P WHERE 1=0), F AS (SELECT * FROM P WHERE 1=0), ' + ($expression -replace '^WITH\s+', '')
     $body = @{
         queries = @(@{refId='C'; datasource=@{type='__expr__'; uid='__expr__'}; type='sql'; expression=$sql})
         from = [string]$end.AddHours(-1).ToUnixTimeMilliseconds()

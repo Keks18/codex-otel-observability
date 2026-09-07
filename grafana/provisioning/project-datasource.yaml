@@ -1,0 +1,10 @@
+apiVersion: 1
+datasources:
+  - name: Codex projects
+    uid: codex-projects
+    type: tempo
+    access: proxy
+    url: http://127.0.0.1:3200
+    editable: false
+    jsonData:
+      timeRangeForTags: 604800

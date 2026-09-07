@@ -1,3 +1,28 @@
+# Regular-turn support checkpoint (unreleased)
+
+Date: 2026-09-07. Branch: `main`. Report schema: `3.0`.
+
+- Synthetic fixed snapshot: 2 completed, 1 failed/unclassified, 33 tool calls,
+  2 tool failures; both completed turns have missing token usage.
+- Six actual Grafana lifecycle SQL panels agree with the hydrated report on the
+  same synthetic project/from/as_of, including conflicting failed/completed
+  signals. Future completion, trace age, exact cwd, payload filtering, unknown
+  signal version, and terminal converter idempotency checks pass.
+- Compose/JSON and all PowerShell parser checks pass. Existing report, dashboard,
+  model-round, presentation and slowest-call regressions pass. Report and regular
+  turn/converter checks also pass in Windows PowerShell 5.1.
+- Restored Tempo configuration validates with the pinned image. All dashboard
+  targets execute on the fixed empty live snapshot.
+- Local Tempo searches returned no traces for each of the preceding seven days;
+  Loki returned no stream labels over that period. Non-empty live parity and
+  browser rendering are not verified. Existing containers/volumes were not
+  changed; the config verifier used a disposable network-isolated container.
+- The normalized terminal marker is an explicit integration contract. Stock
+  telemetry without authoritative outcome/correlation stays unclassified; the
+  converter does not automatically capture notifications or publish markers.
+
+The following checkpoint is historical:
+
 # v0.2.1 verification checkpoint
 
 Date: 2026-09-05
