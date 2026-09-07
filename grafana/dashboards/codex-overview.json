@@ -21,7 +21,7 @@
         },
         "datasource": {
           "type": "tempo",
-          "uid": "tempo"
+          "uid": "codex-projects"
         },
         "definition": "",
         "includeAll": false,
@@ -34,7 +34,7 @@
           "refId": "TempoDatasourceVariableQueryEditor-VariableQuery",
           "type": 1
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -49,7 +49,7 @@
   "timezone": "browser",
   "title": "Codex Overview",
   "uid": "codex-overview",
-  "version": 19,
+  "version": 21,
   "panels": [
     {
       "datasource": {
@@ -73,11 +73,11 @@
       "id": 1,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
@@ -90,10 +90,12 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "metricsQueryType": "instant",
+          "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | count_over_time()",
           "queryType": "traceql",
-          "refId": "A"
+          "refId": "A",
+          "exemplars": 0,
+          "step": "2m"
         }
       ],
       "title": "Completed turns",
@@ -140,10 +142,63 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "metricsQueryType": "instant",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | avg_over_time(span:duration)",
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span:duration)",
           "queryType": "traceql",
-          "refId": "A"
+          "refId": "A",
+          "exemplars": 0,
+          "hide": true,
+          "step": "2m"
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | count_over_time()",
+          "queryType": "traceql",
+          "refId": "B",
+          "exemplars": 0,
+          "hide": true,
+          "step": "2m"
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "refId": "C",
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "sum",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "hide": true
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "refId": "D",
+          "type": "reduce",
+          "expression": "B",
+          "reducer": "sum",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "hide": true
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "refId": "E",
+          "type": "math",
+          "expression": "$C / $D"
         }
       ],
       "title": "Avg duration",
@@ -172,11 +227,11 @@
       "id": 3,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
@@ -189,10 +244,12 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "metricsQueryType": "instant",
+          "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\")",
           "queryType": "traceql",
-          "refId": "A"
+          "refId": "A",
+          "exemplars": 0,
+          "step": "2m"
         }
       ],
       "title": "Total tokens",
@@ -240,10 +297,12 @@
             "uid": "tempo"
           },
           "hide": true,
-          "metricsQueryType": "instant",
+          "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\")",
           "queryType": "traceql",
-          "refId": "A"
+          "refId": "A",
+          "exemplars": 0,
+          "step": "2m"
         },
         {
           "datasource": {
@@ -251,10 +310,12 @@
             "uid": "tempo"
           },
           "hide": true,
-          "metricsQueryType": "instant",
+          "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\")",
           "queryType": "traceql",
-          "refId": "B"
+          "refId": "B",
+          "exemplars": 0,
+          "step": "2m"
         },
         {
           "datasource": {
@@ -263,7 +324,7 @@
           },
           "expression": "A",
           "hide": true,
-          "reducer": "last",
+          "reducer": "sum",
           "refId": "C",
           "settings": {
             "mode": "dropNN"
@@ -277,7 +338,7 @@
           },
           "expression": "B",
           "hide": true,
-          "reducer": "last",
+          "reducer": "sum",
           "refId": "D",
           "settings": {
             "mode": "dropNN"
@@ -320,11 +381,11 @@
       "id": 5,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
@@ -337,10 +398,12 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "metricsQueryType": "instant",
+          "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | count_over_time()",
           "queryType": "traceql",
-          "refId": "A"
+          "refId": "A",
+          "exemplars": 0,
+          "step": "2m"
         }
       ],
       "title": "Tool calls",
@@ -398,11 +461,11 @@
       "id": 6,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
@@ -415,10 +478,12 @@
             "type": "tempo",
             "uid": "tempo"
           },
-          "metricsQueryType": "instant",
+          "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.success = \"false\" } | count_over_time()",
           "queryType": "traceql",
-          "refId": "A"
+          "refId": "A",
+          "exemplars": 0,
+          "step": "2m"
         }
       ],
       "title": "Tool failures",
@@ -469,7 +534,7 @@
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
@@ -485,7 +550,9 @@
           "metricsQueryType": "range",
           "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && span.\"codex.turn.token_usage.total_tokens\" = nil }) | { name = \"session_task.turn\" && span.\"codex.turn.token_usage.total_tokens\" = nil } | count_over_time()",
           "queryType": "traceql",
-          "refId": "A"
+          "refId": "A",
+          "exemplars": 0,
+          "step": "2m"
         }
       ]
     },

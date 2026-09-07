@@ -9,8 +9,10 @@ services:
       - "127.0.0.1:3000:3000"
     volumes:
       - lgtm-data:/data
+      - ./config/tempo.yaml:/otel-lgtm/tempo-config.yaml:ro
       - ./grafana/dashboards:/otel-lgtm/grafana/conf/provisioning/dashboards/codex:ro
       - ./grafana/provisioning/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/codex.yaml:ro
+      - ./grafana/provisioning/project-datasource.yaml:/otel-lgtm/grafana/conf/provisioning/datasources/codex-projects.yaml:ro
     networks:
       - observability
 

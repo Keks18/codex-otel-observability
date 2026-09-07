@@ -103,6 +103,21 @@ Each warning includes a machine-readable `code`, `count`, and short message.
 
 ## Upstream basis and known limits
 
+Snapshot KPI use range queries with a two-minute step and sum all returned
+buckets. Duration is total duration divided by total turn count, and cache hit
+is total cached input divided by total input; neither averages bucket averages.
+The pinned Tempo instant query path can omit a stored turn that the range path
+returns. Metric exemplars are disabled in Tempo because the bundled datasource
+can return annotation frames even when the query requests zero exemplars.
+
+The report uses span searches only to discover activity trace IDs, then reads
+each discovered trace once and counts unique terminal-call keys from complete
+trace contents. Activity spans are bounded by their start timestamp, inclusive
+of `from` and `as_of`. Duplicate span IDs are discarded before call-key dedup.
+An unavailable full trace fails the report rather than silently falling back
+to incomplete search previews. This recovers events split across stored blocks;
+it cannot recover traces omitted entirely by search limits.
+
 Codex documents structured `codex.tool_result` events and the
 `turn.token_usage`/`tool.call` metric families. The current dashboard also uses
 Codex trace span names that are not a stable public API; schema drift therefore

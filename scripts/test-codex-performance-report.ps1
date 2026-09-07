@@ -56,15 +56,11 @@ function Test-ToolNameSource([string]$Source) {
             $frame.data.values += ,@($frame.data.values[0] | ForEach-Object { '' })
         }
     }
-    # Exercise query construction without writing fixtures or contacting Grafana.
-    function Invoke-RestMethod($Uri, $Method, $ContentType, $Body) {
-        $request = $Body | ConvertFrom-Json
-        foreach ($query in @($request.queries | Where-Object refId -in @('C','D'))) {
-            if ($query.query -notmatch 'select\(event\.tool_name,') { throw 'Tool query does not select event.tool_name first.' }
-        }
-        return $response
+    # Exercise legacy search-response compatibility without live hydration.
+    function Get-Content($LiteralPath, [switch]$Raw) {
+        return ($response | ConvertTo-Json -Depth 20)
     }
-    $actual = & $reportScript -Project 'fixture://project' -Period 1h -AsOf $asOf -Format json | ConvertFrom-Json
+    $actual = & $reportScript -Project 'fixture://project' -Period 1h -AsOf $asOf -FixturePath $fixture -Format json | ConvertFrom-Json
     if ($Source -eq 'missing-name') {
         Assert-Equal $actual.tools.byName.Count 1 'missing names group together'
         Assert-Equal $actual.tools.byName[0].tool 'unknown' 'missing name fallback'
@@ -89,3 +85,12 @@ if ($markdown -notmatch 'Non-cached') { throw 'Markdown report is missing token 
 if ($markdown -match 'nested implementation failure') { throw 'Nested failure leaked into Markdown.' }
 
 'codex-performance-report regression: PASS'
+
+$hydrated = & $reportScript -Project 'fixture://project' -Period 1h -AsOf $asOf -FixturePath $fixture -TraceFixturePath (Join-Path $repoRoot 'tests/fixtures/complete-trace-activity.json') -Format json | ConvertFrom-Json
+Assert-Equal $hydrated.summary.toolCalls 3 'complete trace recovers call omitted by search'
+Assert-Equal $hydrated.summary.toolFailures 1 'complete trace terminal failure'
+Assert-Equal $hydrated.turns[0].modelRounds 2 'complete trace rounds'
+Assert-Equal $hydrated.turns[0].modelSamplingMs 4000 'complete trace sampling'
+Assert-Equal $hydrated.turns[0].toolDurationMs 6000 'duplicate spans and out-of-window activity excluded'
+if (($hydrated | ConvertTo-Json -Depth 20) -match 'PRIVATE_SENTINEL') { throw 'Raw trace payload leaked into report.' }
+'complete trace hydration regression: PASS'

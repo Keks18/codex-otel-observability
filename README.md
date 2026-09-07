@@ -45,6 +45,16 @@ The formulas and completeness rules are defined in [METRIC_CONTRACT.md](METRIC_C
    when more than one exists. Select an absolute Grafana time range when you need
    a stable `as_of` snapshot.
 
+   Project discovery searches stored traces in the selected period (up to its
+   last seven days), and reloads when that period changes. If a project has no
+   recent activity, widen the period to include it. After startup, reload the
+   page if it was opened before Tempo was ready. Discovery uses a dedicated
+   provisioned Tempo metadata source; trace links and panel sources are unchanged.
+
+   Trace and metric queries support ranges up to seven days. The local Tempo
+   configuration allows one extra hour for query-boundary alignment; broader
+   selections should be split into smaller periods.
+
 The example keeps raw user prompts disabled. It does not edit your Codex configuration automatically.
 
 ## Update the dashboard
@@ -87,6 +97,14 @@ Run the synthetic regression fixture with:
 .\scripts\test-codex-performance-report.ps1
 ```
 
+Compare the six live KPI against the report on one immutable snapshot:
+
+```powershell
+.\scripts\test-live-snapshot.ps1 -Project 'D:\your-project' -Period '7d' -AsOf '2026-09-07T18:20:00Z'
+```
+
+This read-only test writes no telemetry files and fails on numeric disagreement.
+
 With Grafana running, verify the **Model rounds / turn** panel's SQL against
 synthetic data and the report's fixed snapshot (read-only, no telemetry writes):
 
@@ -106,6 +124,9 @@ node scripts/test-dashboard-presentation.cjs
 
 ## Current v0.2 limitations
 
+- The report reads complete discovered activity traces, which is slower than
+  searching span previews. Trace discovery remains limit-bound; table previews
+  may omit events from long traces even below the per-trace search limit.
 - When Tempo has no `span.cwd` values, the dashboard leaves KPI unset and shows
   `Project not selected` until a project becomes available.
 - Active turns are inferred from recently exported scoped activity; a truly

@@ -6,13 +6,15 @@ param(
     [ValidateRange(1, 1000)][int]$MaxTurns = 500,
     [string]$AsOf,
     [string]$GrafanaBaseUrl = 'http://127.0.0.1:3000',
-    [string]$FixturePath
+    [string]$FixturePath,
+    [string]$TraceFixturePath
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $contractVersion = '2.0'
 $activeGraceSeconds = 120
+. (Join-Path $PSScriptRoot 'trace-activity.ps1')
 
 function ConvertTo-TraceQlString([string]$Value) {
     return '"' + $Value.Replace('\', '\\').Replace('"', '\"') + '"'
@@ -135,6 +137,28 @@ foreach ($ref in @('A','B','C','D','R','S')) {
         ($null -ne $result.PSObject.Properties['partial'] -and (Get-Bool $result.partial))) {
         Add-Warning 'oversized_or_partial' 1 "Query $ref returned partial data."
     }
+}
+
+# Search span sets are discovery results, not complete trace contents. Tempo can
+# omit spans split across stored blocks even below spss and without HTTP 206.
+# Hydrate each discovered activity trace once, then deduplicate by span/call ID.
+if (-not $FixturePath -or $TraceFixturePath) {
+    $traceIds = @(@($raw.C + $raw.D + $raw.R + $raw.S) | ForEach-Object { Get-TraceId $_ } | Where-Object { $_ } | Sort-Object -Unique)
+    $activity = [System.Collections.Generic.List[object]]::new()
+    $traceFixtures = if ($TraceFixturePath) { Get-Content -Raw $TraceFixturePath | ConvertFrom-Json } else { $null }
+    foreach ($traceId in $traceIds) {
+        if ($traceFixtures) {
+            $traceResponse = $traceFixtures.PSObject.Properties[$traceId].Value
+        } else {
+            if ($traceId -notmatch '^[0-9a-fA-F]{1,32}$') { throw 'Invalid trace ID returned by Tempo.' }
+            $traceResponse = Invoke-RestMethod -Uri "$($GrafanaBaseUrl.TrimEnd('/'))/api/datasources/proxy/uid/tempo/api/traces/$traceId" -Method Get
+        }
+        # A failed hydration must fail the report, never silently produce totals
+        # from a mixture of complete and truncated search span sets.
+        foreach ($row in @(ConvertFrom-TraceActivity $traceResponse $traceId $fromValue.ToUnixTimeMilliseconds() $toMs)) { $activity.Add($row) }
+    }
+    foreach ($ref in @('C','R','S')) { $raw[$ref]=@($activity | Where-Object source -eq $ref) }
+    $raw.D=@($raw.C | Where-Object { (Get-Value $_ @('event.success') '') -in @('false','False','0') })
 }
 
 $turnRows = @()

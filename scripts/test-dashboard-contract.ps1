@@ -16,9 +16,16 @@ function Assert-True([bool]$Condition, [string]$Message) {
 Assert-True ($dashboard.refresh -eq '10s') 'Dashboard refresh must remain 10s.'
 $cwd = @($dashboard.templating.list | Where-Object name -eq 'cwd')
 Assert-True ($cwd.Count -eq 1 -and $cwd[0].label -eq 'Project cwd') 'Project cwd filter is missing.'
-Assert-True ($cwd[0].type -eq 'query' -and $cwd[0].datasource.uid -eq 'tempo') 'Project cwd must be populated by Tempo.'
+Assert-True ($cwd[0].type -eq 'query' -and $cwd[0].datasource.uid -eq 'codex-projects') 'Project cwd must use the bounded historical Tempo metadata source.'
 Assert-True ($cwd[0].query.type -eq 1 -and $cwd[0].query.label -eq 'cwd') 'Project cwd must query Tempo cwd label values.'
-Assert-True ($cwd[0].refresh -eq 1 -and -not $cwd[0].multi -and -not $cwd[0].includeAll) 'Project cwd must auto-select one exact value and remain single-select.'
+Assert-True ($cwd[0].refresh -eq 2 -and -not $cwd[0].multi -and -not $cwd[0].includeAll) 'Project cwd must refresh on time-range changes and remain single-select.'
+$projectSource = Get-Content -Raw (Join-Path $repoRoot 'grafana/provisioning/project-datasource.yaml')
+Assert-True ($projectSource -match 'timeRangeForTags:\s+604800') 'Project discovery must query stored history with explicit time bounds.'
+$compose = Get-Content -Raw (Join-Path $repoRoot 'compose.yaml')
+Assert-True ($compose -match 'project-datasource.yaml:/otel-lgtm/grafana/conf/provisioning/datasources/codex-projects.yaml:ro') 'Historical project discovery must be provisioned at startup.'
+$tempoConfig = Get-Content -Raw (Join-Path $repoRoot 'config/tempo.yaml')
+Assert-True ($compose -match 'config/tempo.yaml:/otel-lgtm/tempo-config.yaml:ro') 'Tempo query limits must be provisioned at startup.'
+Assert-True ($tempoConfig -match '(?s)query_frontend:.*search:.*max_duration: 169h.*metrics:.*max_duration: 169h') 'Weekly dashboard ranges require matching trace and metric limits with boundary headroom.'
 Assert-True ($cwd[0].current.isNone -and $cwd[0].current.value -eq '' -and $cwd[0].current.text -match 'Project not selected') 'Project cwd must persist the explicit safe empty state, not a machine-specific path.'
 Assert-True ($dashboard.panels.Count -eq 19) 'Unexpected dashboard panel count.'
 Assert-True ($raw -notmatch '>>') 'Strict descendant queries must not be used for trace joins.'
@@ -77,6 +84,20 @@ Assert-True ($multipleProjects.Projects -ccontains 'C:\work\alpha' -and $multipl
 
 $completed = @($dashboard.panels | Where-Object id -eq 1)[0].targets[0].query
 Assert-True ($completed -match 'session_task\.turn' -and $completed -match 'total_tokens' -and $completed -match 'cwd') 'Completed-turn KPI contract drifted.'
+
+foreach ($panel in @($dashboard.panels | Where-Object id -in @(1,2,3,4,5,6,17))) {
+    foreach ($target in @($panel.targets | Where-Object { $_.datasource.uid -eq 'tempo' })) {
+        Assert-True ($target.metricsQueryType -eq 'range' -and $target.exemplars -eq 0 -and $target.step -eq '2m') 'Snapshot KPI must use complete range series with an explicit bounded step and no exemplars.'
+    }
+    if ($panel.id -in @(1,3,5,6,17)) {
+        Assert-True ($panel.options.reduceOptions.calcs[0] -eq 'sum') 'Count/token KPI must sum the entire snapshot, not the last bucket.'
+    }
+    if ($panel.id -in @(2,4)) {
+        $reductions = @($panel.targets | Where-Object { $_.PSObject.Properties['reducer'] })
+        Assert-True ($reductions.Count -eq 2 -and @($reductions | Where-Object reducer -ne 'sum').Count -eq 0) 'Ratios must divide snapshot sums, never average bucket averages.'
+    }
+}
+Assert-True ($tempoConfig -match 'max_exemplars:\s+0') 'Tempo must suppress annotation frames before Grafana expressions aggregate numeric series.'
 
 $failurePanels = @($dashboard.panels | Where-Object id -in @(6, 12, 14))
 foreach ($panel in $failurePanels) {
