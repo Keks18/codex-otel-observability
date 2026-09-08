@@ -4,8 +4,8 @@ This repository does not vendor the following projects. Docker Compose pulls the
 
 ## OpenTelemetry Collector
 
-- Project: <https://github.com/open-telemetry/opentelemetry-collector>
-- Image: `otel/opentelemetry-collector:0.159.0`
+- Project: <https://github.com/open-telemetry/opentelemetry-collector-contrib>
+- Image: `otel/opentelemetry-collector-contrib:0.159.0`
 - License: Apache License 2.0
 
 ## Grafana Docker OTEL LGTM

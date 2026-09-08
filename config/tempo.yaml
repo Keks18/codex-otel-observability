@@ -42,6 +42,10 @@ metrics_generator:
 
 overrides:
   defaults:
+    global:
+      # The observed long Codex trace is about 15.1 MB. Keep modest headroom
+      # without approaching Tempo's documented 60 MB upper recommendation.
+      max_bytes_per_trace: 20000000
     metrics_generator:
       processors: [service-graphs, span-metrics]
 

@@ -5,6 +5,10 @@ receivers:
         endpoint: 0.0.0.0:4318
 
 processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
   filter/privacy:
     error_mode: ignore
     logs:
@@ -24,23 +28,58 @@ processors:
     attributes:
       - pattern: (?i)^(user\..*|enduser\..*|user_(id|name|email)|email|username)$
         action: delete
-  batch: {}
+  transform/privacy_events:
+    # Fail closed: a runtime transform error drops the affected batch instead of
+    # exporting an event whose sensitive attributes may be unsanitized.
+    error_mode: propagate
+    trace_statements:
+      - context: spanevent
+        statements:
+          - 'delete_matching_keys(spanevent.attributes, "(?i)^(prompt|user_prompt|input|tool_input|arguments|tool_arguments|output|tool_output|payload|content|message|body)$")'
+          - 'delete_matching_keys(spanevent.attributes, "(?i)^(error\\.message|exception\\.message|exception\\.stacktrace)$")'
+          - 'delete_matching_keys(spanevent.attributes, "(?i)^(user\\..*|enduser\\..*|user_(id|name|email)|email|username)$")'
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
 
 exporters:
-  otlphttp/lgtm:
+  otlp_http/lgtm:
     endpoint: http://codex-otel-lgtm:4318
+    timeout: 10s
+    sending_queue:
+      enabled: true
+      sizer: items
+      queue_size: 8192
+      num_consumers: 4
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 10s
+      max_elapsed_time: 1m
 
 service:
+  telemetry:
+    metrics:
+      level: normal
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+                without_type_suffix: false
+                without_units: true
   pipelines:
     logs:
       receivers: [otlp]
-      processors: [filter/privacy, attributes/privacy, resource/privacy, batch]
-      exporters: [otlphttp/lgtm]
+      processors: [memory_limiter, filter/privacy, attributes/privacy, resource/privacy, batch]
+      exporters: [otlp_http/lgtm]
     traces:
       receivers: [otlp]
-      processors: [attributes/privacy, resource/privacy, batch]
-      exporters: [otlphttp/lgtm]
+      processors: [memory_limiter, attributes/privacy, resource/privacy, transform/privacy_events, batch]
+      exporters: [otlp_http/lgtm]
     metrics:
       receivers: [otlp]
-      processors: [resource/privacy, batch]
-      exporters: [otlphttp/lgtm]
+      processors: [memory_limiter, attributes/privacy, resource/privacy, batch]
+      exporters: [otlp_http/lgtm]

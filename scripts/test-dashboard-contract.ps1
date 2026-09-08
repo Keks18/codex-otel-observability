@@ -38,7 +38,7 @@ $tempoConfig = Get-Content -Raw (Join-Path $repoRoot 'config/tempo.yaml')
 Assert-True ($compose -match 'config/tempo.yaml:/otel-lgtm/tempo-config.yaml:ro') 'Tempo query limits must be provisioned at startup.'
 Assert-True ($tempoConfig -match '(?s)query_frontend:.*search:.*max_duration: 169h.*metrics:.*max_duration: 169h') 'Weekly dashboard ranges require matching trace and metric limits with boundary headroom.'
 Assert-True ($cwd[0].current.isNone -and $cwd[0].current.value -eq '' -and $cwd[0].current.text -match 'Project not selected') 'Project cwd must persist the explicit safe empty state, not a machine-specific path.'
-Assert-True ($dashboard.panels.Count -eq 19) 'Unexpected dashboard panel count.'
+Assert-True ($dashboard.panels.Count -eq 21) 'Unexpected dashboard panel count.'
 Assert-True ($raw -notmatch '>>') 'Strict descendant queries must not be used for trace joins.'
 Assert-True ($raw -notmatch '"type": "loki"') 'Dashboard must not query Loki log bodies.'
 Assert-True ($raw -notmatch '\{\{\.output\}\}|tool_arguments|user_prompt') 'Unbounded/private payload fields are present.'
@@ -272,6 +272,21 @@ foreach ($panel in $toolPanels) {
 }
 
 Assert-True ($linkCount -ge 3) 'Required Trace ID links are missing.'
+
+$tempoDiscards = @($dashboard.panels | Where-Object id -eq 20)[0]
+Assert-True ($tempoDiscards.datasource.uid -eq 'prometheus' -and $tempoDiscards.type -eq 'timeseries') 'Tempo discard history must use the local Prometheus datasource.'
+$discardQuery = @($tempoDiscards.targets | Where-Object refId -eq 'A')[0].expr
+foreach ($reason in @('trace_too_large', 'trace_too_large_to_compact', 'live_traces_exceeded', 'rate_limited')) {
+    Assert-True ($discardQuery -match [regex]::Escape($reason)) "Tempo discard monitoring is missing $reason."
+}
+Assert-True ($discardQuery -match 'tempo_discarded_spans_total' -and $discardQuery -match 'sum by \(reason\)') 'Tempo discard monitoring must retain the reason dimension.'
+
+$collectorQueue = @($dashboard.panels | Where-Object id -eq 21)[0]
+Assert-True ($collectorQueue.datasource.uid -eq 'prometheus' -and $collectorQueue.type -eq 'timeseries') 'Collector queue monitoring must use the local Prometheus datasource.'
+$queueText = (@($collectorQueue.targets | ForEach-Object expr) -join ' ')
+Assert-True ($queueText -match 'otelcol_exporter_queue_size' -and $queueText -match 'otelcol_exporter_queue_capacity') 'Collector queue size and capacity must remain visible together.'
+Assert-True (([regex]::Matches($queueText, 'job="otel-collector"')).Count -eq 2) 'Collector queue panels must not include another Collector job.'
+Assert-True ($tempoDiscards.description -match 'Stack-wide' -and $collectorQueue.description -match 'Stack-wide') 'Backend health panels must not imply Project cwd scoping.'
 
 'codex dashboard contract regression: PASS'
 

@@ -145,8 +145,9 @@ Each warning includes a machine-readable `code`, `count`, and short message.
 - Collector processors drop log records before Loki export (the pinned build
   cannot sanitize arbitrary log bodies) and remove raw prompt, arguments,
   payload, content, output, message, user identity, exception message, and
-  stacktrace attributes from traces. Safe event/tool names, success, duration,
-  call ID, trace ID, and error kind remain available.
+  stacktrace attributes from trace resources, spans, and span events. Event
+  sanitization uses an explicit OTTL `spanevent` context. Safe event/tool names,
+  success, duration, call ID, trace ID, and error kind remain available.
 - Dashboard queries never render raw tool arguments/output or user metadata.
 - High-cardinality values are table fields or structured metadata, not dashboard
   group-by dimensions. No telemetry is exported outside the local two-container
@@ -186,6 +187,12 @@ produces a coverage warning instead of silently changing the formulas.
 Tempo search is limit-bound and can return partial traces. A clean result means
 "no incompleteness observed within configured limits", not proof that upstream
 storage contains no omitted trace.
+
+Tempo and Collector health counters are stack-wide rather than project-scoped.
+Prometheus retains the reason dimension for `tempo_discarded_spans_total` and
+scrapes Collector exporter queue/failure metrics. The dashboard monitors the
+reviewed Tempo discard reasons plus exporter queue occupancy/capacity; the
+README contains failure-rate PromQL for operational diagnosis.
 
 ## Fixed regression snapshot
 

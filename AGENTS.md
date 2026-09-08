@@ -44,6 +44,16 @@ if ($parseErrors.Count -gt 0) { throw ($parseErrors | Out-String) }
 
 For changes to queries or metric semantics, also compare dashboard and report results over the same fixed project, period, and `as_of` snapshot. Report exactly which checks ran; do not claim live or browser verification that was not performed.
 
+For Collector, Tempo, Prometheus, queue/retry, or privacy changes, also run:
+
+```powershell
+.\scripts\test-observability-config.ps1
+.\scripts\test-collector-privacy.ps1
+```
+
+The privacy smoke must use only synthetic telemetry and a disposable isolated
+Collector. It must not write into the running LGTM stack or its volume.
+
 ## Git and releases
 
 - Use semantic versions; `v0.x` means the metric contract may still change.

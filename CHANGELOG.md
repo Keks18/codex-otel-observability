@@ -6,6 +6,17 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Raise Tempo's explicit per-trace cap from its 5 MB default to a reviewed
+  20 MB ceiling, enough for the observed 15.1 MB class without retaining the
+  temporary 50 MB diagnostic value.
+- Add `memory_limiter` first in every Collector pipeline, bounded batching,
+  an explicit in-memory sending queue/retry policy, and private-network scraping
+  of Collector internal metrics.
+- Use the pinned contrib Collector distribution so OTTL can remove sensitive
+  span-event attributes while retaining safe tool analytics.
+- Add stack-wide dashboard panels for the four actionable Tempo discard reasons
+  and Collector queue size/capacity.
+- Add static operational-contract and isolated synthetic Collector privacy tests.
 - Report schema 3.0 separates completed/failed/unclassified turn status from
   token availability. No trace-age completion inference; missing tokens stay
   unknown and completed turns without usage emit a warning.
@@ -19,6 +30,9 @@ All notable changes to this project are documented in this file.
 
 ### Verification
 
+- Collector config validation uses the pinned contrib image. The isolated
+  privacy smoke asserts sensitive resource/span/span-event fields do not reach
+  a file exporter while safe `tool_name`, `success`, and cwd fields survive.
 - Synthetic snapshot: 2 completed, 1 failed/unclassified, 33 tool calls and
   2 tool failures. Actual Grafana lifecycle SQL agrees with the hydrated report.
 - Existing report, dashboard, model-round, presentation and tool-table checks

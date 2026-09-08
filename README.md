@@ -57,6 +57,65 @@ The formulas and completeness rules are defined in [METRIC_CONTRACT.md](METRIC_C
 
 The example keeps raw user prompts disabled. It does not edit your Codex configuration automatically.
 
+The local Prometheus instance scrapes Tempo and the Collector every 15 seconds.
+This preserves a bounded 15-day history of ingestion-quality and exporter-pressure
+metrics. The **Tempo discarded spans / second** panel tracks the four actionable
+discard reasons; **Collector exporter queue** shows queue occupancy and capacity.
+These backend-health panels are stack-wide because Tempo and Collector counters
+do not contain `Project cwd`.
+
+Tempo uses an explicit 20,000,000-byte per-trace cap. This is enough for the
+observed approximately 15.1 MB Codex trace with modest headroom, while staying
+well below [Tempo's documented 60 MB upper recommendation](https://grafana.com/docs/tempo/latest/troubleshooting/out-of-memory-errors/).
+The cap is still [enforced asynchronously](https://grafana.com/docs/tempo/latest/operations/manage-trace-ingestion/)
+and an oversized trace can be partially dropped. Treat large traces as an
+instrumentation problem first: reduce repeated spans and payload-heavy
+attributes before considering another limit increase.
+
+Useful Prometheus queries are:
+
+```promql
+sum by (reason) (rate(tempo_discarded_spans_total{reason=~"trace_too_large|trace_too_large_to_compact|live_traces_exceeded|rate_limited"}[5m]))
+sum(otelcol_exporter_queue_size{job="otel-collector"})
+sum(otelcol_exporter_queue_capacity{job="otel-collector"})
+sum(rate(otelcol_exporter_enqueue_failed_spans_total{job="otel-collector"}[5m]))
+sum(rate(otelcol_exporter_send_failed_spans_total{job="otel-collector"}[5m]))
+```
+
+The scrape is local-only and does not export metrics outside the Compose stack.
+
+## Collector resilience and privacy
+
+Following the [Collector processor-order guidance](https://github.com/open-telemetry/opentelemetry-collector/blob/main/processor/README.md),
+`memory_limiter` is first in every pipeline. The batch processor flushes at
+1,024 items and never sends more than 2,048 items in one batch. The local OTLP
+exporter has an 8,192-item in-memory queue, four consumers, bounded one-minute
+retry, and a ten-second attempt timeout. Queueing is intentionally not persistent:
+routine restarts do not write telemetry into a new repository mount. See the
+[Collector resiliency guide](https://opentelemetry.io/docs/collector/resiliency/)
+for queue and retry failure modes.
+
+Trace privacy covers resource, span, and span-event attributes. The
+`attributes` and `resource` processors remove sensitive record attributes; an
+OTTL [`spanevent` transform](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/pkg/ottl/contexts/ottlspanevent/README.md)
+removes the same payload, identity, and exception fields from events while
+retaining bounded analytics fields such as `tool_name`
+and `success`. The event transform is fail-closed: a transform error drops the
+affected batch instead of exporting an unsanitized event. Logs remain dropped
+before export, and metric record attributes use the same sensitive-key policy.
+
+There is no permanent debug exporter. If temporary diagnostics are required,
+place it after all privacy processors and use only:
+
+```yaml
+debug/temporary:
+  verbosity: basic
+```
+
+[`verbosity: detailed`](https://github.com/open-telemetry/opentelemetry-collector/blob/main/exporter/debugexporter/README.md)
+can print telemetry contents and must not be used with real Codex data. Remove
+the exporter and its pipeline references after the check.
+
 ## Update the dashboard
 
 After pulling repository updates, run `docker compose up -d`. Compose applies
@@ -105,6 +164,14 @@ substitute a turn UUID for its trace ID. Without authoritative correlation,
 leave the trace unclassified. Never commit the notification or generated payload.
 Existing installations are not modified by these repository changes.
 
+A successful synthetic marker proves the Collector-to-Tempo terminal contract;
+it does not prove that stock Codex instrumentation emitted a terminal signal.
+Real traces without `codex.turn.terminal`, an explicit status on
+`session_task.turn`, or legacy token-bearing completion remain unclassified.
+Fixing the stock emitter requires an upstream Codex instrumentation change or a
+separately deployed, authoritative app-server integration that preserves the
+original trace ID; this repository does not infer completion from unrelated spans.
+
 Run the synthetic acceptance snapshot (2 completed, 1 failed/unclassified,
 33 tool calls, 2 tool failures), including actual Grafana SQL comparisons:
 
@@ -113,6 +180,20 @@ Run the synthetic acceptance snapshot (2 completed, 1 failed/unclassified,
 # Report/converter-only checks when Grafana is unavailable:
 .\scripts\test-regular-turns.ps1 -SkipGrafana
 ```
+
+Validate the operational configuration and run the isolated synthetic privacy
+smoke test with:
+
+```powershell
+.\scripts\test-observability-config.ps1
+.\scripts\test-collector-privacy.ps1
+```
+
+The privacy test starts a disposable Collector container on a random loopback
+port, verifies that sensitive span/resource/event fields are removed while safe
+tool fields survive, confirms queue metrics are exposed, and then deletes only
+its generated `artifacts/` subdirectory. Its retry target is an unused loopback
+port; the synthetic trace is never sent to the running LGTM stack or the network.
 
 ## Performance report
 
