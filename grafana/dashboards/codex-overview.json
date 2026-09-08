@@ -49,7 +49,7 @@
   "timezone": "browser",
   "title": "Codex Overview",
   "uid": "codex-overview",
-  "version": 22,
+  "version": 23,
   "panels": [
     {
       "datasource": {
@@ -58,9 +58,25 @@
       },
       "fieldConfig": {
         "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
           "noValue": "\u2014",
           "unit": "short",
-          "displayName": "Completed turns"
+          "displayName": "Completed turns",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "\u2014",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -160,9 +176,25 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
           "noValue": "\u2014",
           "unit": "s",
-          "displayName": "Avg duration"
+          "displayName": "Avg duration",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "\u2014",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -261,9 +293,25 @@
       },
       "fieldConfig": {
         "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
           "noValue": "\u2014",
           "unit": "short",
-          "displayName": "Total tokens"
+          "displayName": "Total tokens",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "\u2014",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -313,9 +361,41 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 1,
+          "color": {
+            "mode": "thresholds"
+          },
           "noValue": "\u2014",
           "unit": "percent",
-          "displayName": "Cache hit %"
+          "displayName": "Cache hit %",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "\u2014",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -415,9 +495,25 @@
       },
       "fieldConfig": {
         "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
           "noValue": "\u2014",
           "unit": "short",
-          "displayName": "Tool calls"
+          "displayName": "Tool calls",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "\u2014",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -470,8 +566,8 @@
             "mode": "thresholds"
           },
           "noValue": "\u2014",
-          "unit": "short",
-          "displayName": "Tool failures",
+          "unit": "percent",
+          "displayName": "Tool failure rate %",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -480,8 +576,12 @@
                 "value": null
               },
               {
-                "color": "red",
+                "color": "orange",
                 "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
               }
             ]
           },
@@ -497,7 +597,7 @@
               }
             }
           ],
-          "decimals": 0
+          "decimals": 1
         },
         "overrides": []
       },
@@ -514,7 +614,7 @@
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
-            "sum"
+            "lastNotNull"
           ],
           "fields": "",
           "values": false
@@ -532,12 +632,64 @@
           "queryType": "traceql",
           "refId": "A",
           "exemplars": 0,
-          "step": "2m"
+          "step": "2m",
+          "hide": true
+        },
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "metricsQueryType": "range",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" } | count_over_time()",
+          "queryType": "traceql",
+          "refId": "B",
+          "exemplars": 0,
+          "step": "2m",
+          "hide": true
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "hide": true,
+          "reducer": "sum",
+          "refId": "C",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "type": "reduce"
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "B",
+          "hide": true,
+          "reducer": "sum",
+          "refId": "D",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "type": "reduce"
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "refId": "E",
+          "type": "math",
+          "expression": "$C / ($D + ($D == 0)) * 100 + 0 * log($D != 0)",
+          "hide": false
         }
       ],
-      "title": "Tool failures",
+      "title": "Tool failure rate %",
       "type": "stat",
-      "description": "Failed terminal outcomes from the same canonical tool-call set used by the failure table."
+      "description": "100 \u00d7 failures / calls for terminal top-level outcomes in one canonical tool-call set. failures counts event.success = false; calls counts all calls. Returns null when calls = 0."
     },
     {
       "id": 16,
@@ -589,9 +741,94 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "\u2014",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed turns"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missing_turn_or_root"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completed without token usage"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "colorMode": "value",

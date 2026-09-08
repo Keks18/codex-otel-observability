@@ -11,8 +11,8 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $report = & (Join-Path $PSScriptRoot 'codex-performance-report.ps1') -Project $Project -Period $Period -AsOf $AsOf -GrafanaBaseUrl $GrafanaBaseUrl | ConvertFrom-Json
 $dashboard = Get-Content -Raw (Join-Path $root 'grafana/dashboards/codex-overview.json') | ConvertFrom-Json
-$from = [string][DateTimeOffset]::Parse($report.snapshot.from).ToUnixTimeMilliseconds()
-$to = [string][DateTimeOffset]::Parse($report.snapshot.asOf).ToUnixTimeMilliseconds()
+$from = ([DateTimeOffset]$report.snapshot.from).ToUnixTimeMilliseconds().ToString([Globalization.CultureInfo]::InvariantCulture)
+$to = ([DateTimeOffset]$report.snapshot.asOf).ToUnixTimeMilliseconds().ToString([Globalization.CultureInfo]::InvariantCulture)
 $literal = $Project.Replace('\','\\').Replace('"','\"')
 $panelResults = @{}
 foreach ($panel in @($dashboard.panels | Where-Object { $_.PSObject.Properties['targets'] })) {
@@ -25,7 +25,7 @@ foreach ($panel in @($dashboard.panels | Where-Object { $_.PSObject.Properties['
     foreach ($result in $response.results.PSObject.Properties) {
         if ($result.Value.status -notin @(200,206)) { throw "Dashboard panel $($panel.id)/$($result.Name) returned $($result.Value.status)." }
     }
-    $panelResults[$panel.id] = $response
+    $panelResults[[int]$panel.id] = $response
 }
 'All dashboard target queries execute on the fixed live snapshot: PASS'
 if ($report.turnStates.Count -eq 0) {
@@ -46,14 +46,13 @@ Assert-Number (Get-FirstValue 17 'Z' 0) $report.summary.failedOrUnclassifiedTurn
 Assert-Number (Get-FirstValue 17 'Z' 1) $report.summary.failedTurns 'Failed turns'
 Assert-Number (Get-FirstValue 17 'Z' 2) $report.summary.unclassifiedTurns 'missing_turn_or_root'
 Assert-Number (Get-FirstValue 17 'Z' 3) $report.summary.completedWithoutTokenUsage 'Completed without tokens'
-foreach ($id in @(5,6)) {
-    $sum = 0
-    foreach ($frame in @($panelResults[$id].results.A.frames)) {
-        for ($j=0;$j -lt $frame.schema.fields.Count;$j++) {
-            if ($frame.schema.fields[$j].type -eq 'number') { $sum += ($frame.data.values[$j] | Measure-Object -Sum).Sum }
-        }
+$toolCalls = 0
+foreach ($frame in @($panelResults[5].results.A.frames)) {
+    for ($j=0;$j -lt $frame.schema.fields.Count;$j++) {
+        if ($frame.schema.fields[$j].type -eq 'number') { $toolCalls += ($frame.data.values[$j] | Measure-Object -Sum).Sum }
     }
-    $expected = if ($id -eq 5) { $report.summary.toolCalls } else { $report.summary.toolFailures }
-    Assert-Number $sum $expected "Tool KPI $id"
 }
-"Live dashboard/report parity: completed=$($report.summary.completedTurns), failed/unclassified=$($report.summary.failedOrUnclassifiedTurns), calls=$($report.summary.toolCalls), tool failures=$($report.summary.toolFailures) PASS"
+Assert-Number $toolCalls $report.summary.toolCalls 'Tool calls'
+$expectedFailureRate = if ($report.summary.toolCalls -eq 0) { $null } else { 100.0 * $report.summary.toolFailures / $report.summary.toolCalls }
+Assert-Number (Get-FirstValue 6 'E') $expectedFailureRate 'Tool failure rate %'
+"Live dashboard/report parity: completed=$($report.summary.completedTurns), failed/unclassified=$($report.summary.failedOrUnclassifiedTurns), calls=$($report.summary.toolCalls), tool failures=$($report.summary.toolFailures), failure rate=$expectedFailureRate% PASS"
