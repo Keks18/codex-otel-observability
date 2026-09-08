@@ -21,6 +21,7 @@ Assert-True ($cwd[0].query.type -eq 1 -and $cwd[0].query.label -eq 'cwd') 'Proje
 Assert-True ($cwd[0].refresh -eq 2 -and -not $cwd[0].multi -and -not $cwd[0].includeAll) 'Project cwd must refresh on time-range changes and remain single-select.'
 $projectSource = Get-Content -Raw (Join-Path $repoRoot 'grafana/provisioning/project-datasource.yaml')
 Assert-True ($projectSource -match 'timeRangeForTags:\s+604800') 'Project discovery must query stored history with explicit time bounds.'
+Assert-True ($projectSource -match '(?s)deleteDatasources:.*?name:\s+Codex projects.*?orgId:\s+1') 'Project datasource provisioning must remove an unprovisioned predecessor before recreating the stable UID.'
 $compose = Get-Content -Raw (Join-Path $repoRoot 'compose.yaml')
 Assert-True ($compose -match 'project-datasource.yaml:/otel-lgtm/grafana/conf/provisioning/datasources/codex-projects.yaml:ro') 'Historical project discovery must be provisioned at startup.'
 $tempoConfig = Get-Content -Raw (Join-Path $repoRoot 'config/tempo.yaml')

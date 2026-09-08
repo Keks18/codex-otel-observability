@@ -1,4 +1,9 @@
 apiVersion: 1
+deleteDatasources:
+  # The datasource was introduced after the named LGTM volume. Remove an
+  # unprovisioned predecessor by name before recreating the stable UID.
+  - name: Codex projects
+    orgId: 1
 datasources:
   - name: Codex projects
     uid: codex-projects
