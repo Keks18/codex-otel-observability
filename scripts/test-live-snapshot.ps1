@@ -42,9 +42,9 @@ function Assert-Number($Actual, $Expected, [string]$Name) {
     if ($null -eq $Actual -or $null -eq $Expected -or [math]::Abs([double]$Actual-[double]$Expected) -gt 0.0001) { throw "$Name mismatch: dashboard=$Actual; report=$Expected." }
 }
 Assert-Number (Get-FirstValue 1 'Z') $report.summary.completedTurns 'Completed turns'
-Assert-Number (Get-FirstValue 17 'Z' 0) $report.summary.failedOrUnclassifiedTurns 'Failed / unclassified'
-Assert-Number (Get-FirstValue 17 'Z' 1) $report.summary.failedTurns 'Failed turns'
-Assert-Number (Get-FirstValue 17 'Z' 2) $report.summary.unclassifiedTurns 'missing_turn_or_root'
+Assert-Number (Get-FirstValue 17 'Z' 0) $report.coverage.completionSignals.explicit 'Explicit terminal'
+Assert-Number (Get-FirstValue 17 'Z' 1) $report.coverage.completionSignals.legacy 'Legacy completion'
+Assert-Number (Get-FirstValue 17 'Z' 2) $report.coverage.completionSignals.missing 'Missing terminal / outcome'
 Assert-Number (Get-FirstValue 17 'Z' 3) $report.summary.completedWithoutTokenUsage 'Completed without tokens'
 $toolCalls = 0
 foreach ($frame in @($panelResults[5].results.A.frames)) {
@@ -53,6 +53,6 @@ foreach ($frame in @($panelResults[5].results.A.frames)) {
     }
 }
 Assert-Number $toolCalls $report.summary.toolCalls 'Tool calls'
-$expectedFailureRate = if ($report.summary.toolCalls -eq 0) { $null } else { 100.0 * $report.summary.toolFailures / $report.summary.toolCalls }
-Assert-Number (Get-FirstValue 6 'E') $expectedFailureRate 'Tool failure rate %'
-"Live dashboard/report parity: completed=$($report.summary.completedTurns), failed/unclassified=$($report.summary.failedOrUnclassifiedTurns), calls=$($report.summary.toolCalls), tool failures=$($report.summary.toolFailures), failure rate=$expectedFailureRate% PASS"
+$expectedDispatchFailureRate = $report.tools.dispatchFailureRatePct
+Assert-Number (Get-FirstValue 6 'E') $expectedDispatchFailureRate 'Dispatch failure rate %'
+"Live dashboard/report parity: completed=$($report.summary.completedTurns), explicit=$($report.coverage.completionSignals.explicit), legacy=$($report.coverage.completionSignals.legacy), missing=$($report.coverage.completionSignals.missing), calls=$($report.summary.toolCalls), dispatch failures=$($report.summary.toolDispatchFailures), dispatch failure rate=$expectedDispatchFailureRate% PASS"

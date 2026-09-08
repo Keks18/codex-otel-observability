@@ -31,7 +31,8 @@ try {
     Assert-Equal $report.summary.completedTurns 2 'regular completed turns without session_task.turn'
     Assert-Equal $report.summary.failedOrUnclassifiedTurns 1 'failed/unclassified'
     Assert-Equal $report.summary.toolCalls 33 'all terminal tool calls from hydrated traces'
-    Assert-Equal $report.summary.toolFailures 2 'tool failures independent of turn status'
+    Assert-Equal $report.summary.toolDispatchFailures 2 'tool dispatch failures independent of turn status'
+    Assert-Equal $report.summary.toolFailures $null 'combined failures unavailable without shell exit outcomes'
     Assert-Equal $report.summary.completedWithoutTokenUsage 2 'missing usage does not undo completion'
     Assert-Equal $report.tokens.total $null 'unknown tokens remain null'
     Assert-Equal $report.tokens.input $null 'unknown input remains null'
@@ -48,7 +49,7 @@ try {
     Assert-Equal $failedReport.summary.failedTurns 1 'explicit failed turn'
     Assert-Equal $failedReport.summary.unclassifiedTurns 0 'failed is classified separately'
     Assert-Equal $failedReport.summary.toolCalls 33 'failed classification retains tools'
-    Assert-Equal $failedReport.summary.toolFailures 2 'failed classification retains tool failures'
+    Assert-Equal $failedReport.summary.toolDispatchFailures 2 'failed classification retains tool dispatch failures'
     Add-Terminal $failedTraces '11111111111111111111111111111111' 'interrupted' 'ffffffffffffffff'
     $conflicting = Invoke-Report $failedTraces
     Assert-Equal $conflicting.summary.completedTurns 1 'failure overrides conflicting success'
@@ -65,7 +66,7 @@ try {
     $rejected = $false
     try { $null = Invoke-Report $wrong } catch { $rejected = $_.Exception.Message -match 'exact selected project' }
     Assert-Equal $rejected $true 'hydration must validate exact cwd'
-    'Regular-turn report: 2 completed, 1 failed/unclassified, 33 calls, 2 failures; lifecycle, snapshot and privacy cases PASS'
+    'Regular-turn report: 2 completed, 1 failed/unclassified, 33 calls, 2 dispatch failures; lifecycle, snapshot and privacy cases PASS'
 
     # Independent lifecycle notification: only explicitly correlated terminal data
     # can create a marker. The converter does not send it to the running stack.
@@ -96,8 +97,13 @@ try {
                 X=@($rows | Where-Object source -eq 'B'); U=@(); A=@(); B=@()
                 C=@($rows | Where-Object source -eq 'C')
                 D=@($rows | Where-Object { (Get-TraceProperty $_ 'event.success') -eq 'false' })
+                E=@($rows | Where-Object { $_.name -eq 'codex.turn.terminal' -and (Get-TraceProperty $_ 'codex.turn.signal_version') -eq 1 })
+                L=@($rows | Where-Object name -eq 'session_task.turn')
+                Q=@($rows | Where-Object { $_.source -eq 'C' -and (Get-TraceProperty $_ 'event.tool_name') -match '^(shell|exec|exec_command|write_stdin)$' })
+                O=@($rows | Where-Object { $_.source -eq 'C' -and ((Get-TraceProperty $_ 'process.exit_code') -ne $null -or (Get-TraceProperty $_ 'process.success') -ne $null) })
+                N=@($rows | Where-Object { $_.source -eq 'C' -and (((Get-TraceProperty $_ 'process.exit_code') -ne $null -and [int](Get-TraceProperty $_ 'process.exit_code') -ne 0) -or ((Get-TraceProperty $_ 'process.success') -eq $false)) })
             }
-            $prefix = 'WITH ' + ((@('P','F','X','U','A','B','C','D') | ForEach-Object { $_+' AS ('+(ConvertTo-SqlTable $tables[$_])+')' }) -join ', ') + ', '
+            $prefix = 'WITH ' + ((@('P','F','X','U','A','B','C','D','E','L','Q','O','N') | ForEach-Object { $_+' AS ('+(ConvertTo-SqlTable $tables[$_])+')' }) -join ', ') + ', '
             foreach ($id in @(1,2,7,11,13,17)) {
                 $panel = @($dashboard.panels | Where-Object id -eq $id)[0]
                 $expression = @($panel.targets | Where-Object { $_.PSObject.Properties['expression'] })[-1].expression
@@ -108,15 +114,15 @@ try {
                 $frame = $response.results.Z.frames[0]
                 if ($id -eq 1) { Assert-Equal $frame.data.values[0][0] $case.report.summary.completedTurns 'dashboard/report completed parity' }
                 if ($id -eq 17) {
-                    Assert-Equal $frame.data.values[0][0] $case.report.summary.failedOrUnclassifiedTurns 'dashboard/report failed-unclassified parity'
-                    Assert-Equal $frame.data.values[1][0] $case.report.summary.failedTurns 'dashboard/report failed parity'
-                    Assert-Equal $frame.data.values[2][0] $case.report.summary.unclassifiedTurns 'dashboard/report missing signal parity'
+                    Assert-Equal $frame.data.values[0][0] $case.report.coverage.completionSignals.explicit 'dashboard/report explicit signal parity'
+                    Assert-Equal $frame.data.values[1][0] $case.report.coverage.completionSignals.legacy 'dashboard/report legacy signal parity'
+                    Assert-Equal $frame.data.values[2][0] $case.report.coverage.completionSignals.missing 'dashboard/report missing signal parity'
                     Assert-Equal $frame.data.values[3][0] $case.report.summary.completedWithoutTokenUsage 'dashboard/report token warning parity'
                 }
                 if ($id -eq 7) {
                     $names = @($frame.schema.fields | ForEach-Object name)
                     Assert-Equal ($frame.data.values[$names.IndexOf('tool_calls')] | Measure-Object -Sum).Sum $case.report.summary.toolCalls 'dashboard/report 33 calls'
-                    Assert-Equal ($frame.data.values[$names.IndexOf('failures')] | Measure-Object -Sum).Sum $case.report.summary.toolFailures 'dashboard/report 2 tool failures'
+                    Assert-Equal ($frame.data.values[$names.IndexOf('dispatch_failures')] | Measure-Object -Sum).Sum $case.report.summary.toolDispatchFailures 'dashboard/report 2 dispatch failures'
                 }
             }
         }

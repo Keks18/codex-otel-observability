@@ -1,0 +1,24 @@
+{
+  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {"resourceSpans":[{"scopeSpans":[{"spans":[
+    {"spanId":"aaaaaaaaaaaaaaa1","name":"project_activity","startTimeUnixNano":"1788508200000000000","endTimeUnixNano":"1788508200001000000","attributes":[{"key":"cwd","value":{"stringValue":"fixture://project"}}],"events":[]},
+    {"spanId":"aaaaaaaaaaaaaaa2","name":"codex.turn.terminal","startTimeUnixNano":"1788508200000000000","endTimeUnixNano":"1788508260000000000","attributes":[{"key":"codex.turn.status","value":{"stringValue":"completed"}},{"key":"codex.turn.signal_version","value":{"intValue":"1"}},{"key":"model","value":{"stringValue":"gpt-fixture"}}],"events":[]},
+    {"spanId":"aaaaaaaaaaaaaaa3","name":"run_sampling_request","startTimeUnixNano":"1788508205000000000","endTimeUnixNano":"1788508245000000000","attributes":[],"events":[]},
+    {"spanId":"aaaaaaaaaaaaaaa4","name":"dispatch_tool_call_with_terminal_outcome","startTimeUnixNano":"1788508210000000000","endTimeUnixNano":"1788508220000000000","attributes":[{"key":"call_id","value":{"stringValue":"read-failed"}}],"events":[{"attributes":[{"key":"tool_name","value":{"stringValue":"read"}},{"key":"success","value":{"stringValue":"false"}}]}]},
+    {"spanId":"aaaaaaaaaaaaaaa5","name":"dispatch_tool_call_with_terminal_outcome","startTimeUnixNano":"1788508220000000000","endTimeUnixNano":"1788508250000000000","attributes":[{"key":"call_id","value":{"stringValue":"shell-exit-1"}},{"key":"process.exit_code","value":{"intValue":"1"}}],"events":[{"attributes":[{"key":"tool_name","value":{"stringValue":"shell"}},{"key":"success","value":{"stringValue":"true"}}]}]},
+    {"spanId":"aaaaaaaaaaaaaaa6","name":"dispatch_tool_call_with_terminal_outcome","startTimeUnixNano":"1788508250000000000","endTimeUnixNano":"1788508255000000000","attributes":[{"key":"call_id","value":{"stringValue":"shell-unobserved"}}],"events":[{"attributes":[{"key":"tool_name","value":{"stringValue":"shell"}},{"key":"success","value":{"stringValue":"true"}}]}]}
+  ]}]}]},
+  "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": {"resourceSpans":[{"scopeSpans":[{"spans":[
+    {"spanId":"bbbbbbbbbbbbbbb1","name":"project_activity","startTimeUnixNano":"1788508300000000000","endTimeUnixNano":"1788508300001000000","attributes":[{"key":"cwd","value":{"stringValue":"fixture://project"}}],"events":[]},
+    {"spanId":"bbbbbbbbbbbbbbb2","name":"session_task.turn","startTimeUnixNano":"1788508300000000000","endTimeUnixNano":"1788508310000000000","attributes":[{"key":"model","value":{"stringValue":"gpt-legacy"}},{"key":"codex.turn.token_usage.input_tokens","value":{"intValue":"8"}},{"key":"codex.turn.token_usage.output_tokens","value":{"intValue":"2"}},{"key":"codex.turn.token_usage.total_tokens","value":{"intValue":"10"}}],"events":[]}
+  ]}]}]},
+  "cccccccccccccccccccccccccccccccc": {"resourceSpans":[{"scopeSpans":[{"spans":[
+    {"spanId":"ccccccccccccccc1","name":"project_activity","startTimeUnixNano":"1788508320000000000","endTimeUnixNano":"1788508320001000000","attributes":[{"key":"cwd","value":{"stringValue":"fixture://project"}}],"events":[]},
+    {"spanId":"ccccccccccccccc2","name":"session_task.turn","startTimeUnixNano":"1788508320000000000","endTimeUnixNano":"1788508321000000000","attributes":[{"key":"model","value":{"stringValue":"gpt-setup"}},{"key":"codex.turn.token_usage.input_tokens","value":{"intValue":"1"}},{"key":"codex.turn.token_usage.output_tokens","value":{"intValue":"1"}},{"key":"codex.turn.token_usage.total_tokens","value":{"intValue":"2"}}],"events":[]}
+  ]}]}]},
+  "dddddddddddddddddddddddddddddddd": {"resourceSpans":[{"scopeSpans":[{"spans":[
+    {"spanId":"ddddddddddddddd1","name":"project_activity","startTimeUnixNano":"1788508400000000000","endTimeUnixNano":"1788508400001000000","attributes":[{"key":"cwd","value":{"stringValue":"fixture://project"}}],"events":[]}
+  ]}]}]},
+  "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee": {"resourceSpans":[{"scopeSpans":[{"spans":[
+    {"spanId":"eeeeeeeeeeeeeee1","name":"project_activity","startTimeUnixNano":"1788508500000000000","endTimeUnixNano":"1788508500001000000","attributes":[{"key":"cwd","value":{"stringValue":"fixture://worktrees/task/project"}}],"events":[]}
+  ]}]}]}
+}

@@ -36,7 +36,7 @@ function ConvertFrom-TraceActivity($Response, [string]$TraceId, [long]$FromMs, [
         'codex.turn.token_usage.input_tokens','codex.turn.token_usage.output_tokens',
         'codex.turn.token_usage.cached_input_tokens','codex.turn.token_usage.reasoning_output_tokens',
         'codex.turn.token_usage.total_tokens','tool_name','codex.tool.name','call_id','codex.tool.call_id',
-        'nested','retry_count','recovered','failure_class','error.kind')
+        'nested','retry_count','recovered','failure_class','error.kind','process.exit_code','process.success')
     foreach ($span in $spans) {
         $id = [string](Get-TraceProperty $span 'spanId' '')
         if (-not $id) { throw 'Full trace span is missing its ID.' }
@@ -56,7 +56,10 @@ function ConvertFrom-TraceActivity($Response, [string]$TraceId, [long]$FromMs, [
             'run_sampling_request' { 'S' }
             default { 'B' }
         }
-        $row = [ordered]@{source=$source;name=$name;time=$time;duration=[double]($end-$start);traceIdHidden=$TraceId;spanID=$id}
+        $row = [ordered]@{
+            source=$source;name=$name;time=$time;duration=[double]($end-$start)
+            startTimeUnixNano=$start;endTimeUnixNano=$end;traceIdHidden=$TraceId;spanID=$id
+        }
         foreach ($key in $allowed) { if ($attributes.ContainsKey($key)) { $row[$key]=$attributes[$key] } }
         $row['otel.status_code'] = Get-TraceProperty (Get-TraceProperty $span 'status') 'code' 0
         foreach ($event in @(Get-TraceProperty $span 'events' @())) {

@@ -51,6 +51,11 @@ The formulas and completeness rules are defined in [METRIC_CONTRACT.md](METRIC_C
    page if it was opened before Tempo was ready. Discovery uses a dedicated
    provisioned Tempo metadata source; trace links and panel sources are unchanged.
 
+   `Project cwd` is an exact scope. A Codex delegated task commonly runs from a
+   separate worktree cwd, so a saved checkout and
+   `.../worktrees/<task>/project` appear as distinct choices. They are not merged
+   merely because their final directory names match.
+
    Trace and metric queries support ranges up to seven days. The local Tempo
    configuration allows one extra hour for query-boundary alignment; broader
    selections should be split into smaller periods.
@@ -166,14 +171,15 @@ Existing installations are not modified by these repository changes.
 
 A successful synthetic marker proves the Collector-to-Tempo terminal contract;
 it does not prove that stock Codex instrumentation emitted a terminal signal.
-Real traces without `codex.turn.terminal`, an explicit status on
-`session_task.turn`, or legacy token-bearing completion remain unclassified.
+Real traces without `codex.turn.terminal` or legacy token-bearing
+`session_task.turn` completion remain unclassified. Only the versioned
+`codex.turn.terminal` contract is called explicit completion.
 Fixing the stock emitter requires an upstream Codex instrumentation change or a
 separately deployed, authoritative app-server integration that preserves the
 original trace ID; this repository does not infer completion from unrelated spans.
 
 Run the synthetic acceptance snapshot (2 completed, 1 failed/unclassified,
-33 tool calls, 2 tool failures), including actual Grafana SQL comparisons:
+33 tool calls, 2 dispatch failures), including actual Grafana SQL comparisons:
 
 ```powershell
 .\scripts\test-regular-turns.ps1
@@ -204,8 +210,28 @@ port; the synthetic trace is never sent to the running LGTM stack or the network
 ```
 
 The report captures one UTC `as_of`, uses absolute query bounds, and does not
-upload results. JSON schema `3.0` includes completed/failed/unclassified status, independent token coverage,
-token semantics, per-model and per-tool breakdowns, bounded failures, and Trace IDs.
+upload results. JSON schema `4.0` separates explicit/legacy/missing completion,
+dispatch failures, process-outcome coverage, and the combined failure rate.
+When any recognized shell command lacks safe exit outcome telemetry, process and
+combined failure rates are null rather than a healthy zero; the observable
+dispatch failure rate remains separate. Hydrated turns include span-count and
+HTTP JSON payload-byte diagnostics plus a non-overlapping interval union for the
+wall-clock breakdown. Cumulative component durations remain explicitly
+non-additive. JSON payload bytes are not Tempo's internal per-trace byte units.
+
+## Upstream instrumentation gaps
+
+Authoritative delegated-task metrics require Codex to export, on the original
+trace, `codex.turn.terminal`, `codex.turn.status`, and
+`codex.turn.signal_version`; a stable user-visible-turn versus
+orchestration/setup discriminator; safe `process.exit_code` and
+`process.success` for shell commands; and stable `project.root` or repository
+identity shared by a checkout and its worktrees.
+
+The Collector deliberately does not synthesize these fields from tool output,
+model names, short durations, span counts, or directory names. Until upstream
+instrumentation supplies them, the dashboard and report show legacy, partial,
+missing, or unavailable coverage explicitly.
 
 Run the synthetic regression fixture with:
 
@@ -251,6 +277,10 @@ node scripts/test-dashboard-presentation.cjs
 - Tempo search is limit-bound. Partial/oversized results are warnings, not proof
   that all upstream trace data was returned.
 - The dashboard depends on the telemetry schema emitted by the installed Codex version.
+- Without a stable upstream turn-role discriminator, orchestration/setup traces
+  remain visible as turns and are accompanied by a coverage warning.
+- Shell command failure rate is unavailable when safe process outcomes are not
+  exported, even if dispatch delivery has `event.success=true`.
 
 ## Existing local installation
 

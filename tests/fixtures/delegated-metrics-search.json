@@ -1,0 +1,10 @@
+{
+  "results": {
+    "A": {"status":200,"frames":[]},
+    "B": {"status":200,"frames":[{"schema":{"fields":[{"name":"time"},{"name":"traceIdHidden"},{"name":"cwd"}]},"data":{"values":[[1788508200000,1788508300000,1788508320000,1788508400000],["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","cccccccccccccccccccccccccccccccc","dddddddddddddddddddddddddddddddd"],["fixture://project","fixture://project","fixture://project","fixture://project"]]}}]},
+    "C": {"status":200,"frames":[]},
+    "D": {"status":200,"frames":[]},
+    "R": {"status":200,"frames":[]},
+    "S": {"status":200,"frames":[]}
+  }
+}

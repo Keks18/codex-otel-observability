@@ -19,6 +19,7 @@ Assert-True ($cwd.Count -eq 1 -and $cwd[0].label -eq 'Project cwd') 'Project cwd
 Assert-True ($cwd[0].type -eq 'query' -and $cwd[0].datasource.uid -eq 'codex-projects') 'Project cwd must use the bounded historical Tempo metadata source.'
 Assert-True ($cwd[0].query.type -eq 1 -and $cwd[0].query.label -eq 'cwd') 'Project cwd must query Tempo cwd label values.'
 Assert-True ($cwd[0].refresh -eq 2 -and -not $cwd[0].multi -and -not $cwd[0].includeAll) 'Project cwd must refresh on time-range changes and remain single-select.'
+Assert-True ($cwd[0].description -match 'Exact span\.cwd' -and $cwd[0].description -match 'worktree' -and $cwd[0].description -match 'not merged') 'Project cwd must explain exact worktree scoping.'
 $projectSource = Get-Content -Raw (Join-Path $repoRoot 'grafana/provisioning/project-datasource.yaml')
 Assert-True ($projectSource -match 'timeRangeForTags:\s+604800') 'Project discovery must query stored history with explicit time bounds.'
 $deleteSection = [regex]::Match($projectSource, '(?ms)^deleteDatasources:\s*$\r?\n(?<body>.*?)(?=^datasources:\s*$)')
@@ -83,7 +84,7 @@ Assert-ThresholdSteps $cacheHitPanel @(
 ) 'Cache hit.'
 
 $failureRatePanel = @($statPanels | Where-Object id -eq 6)[0]
-Assert-True ($failureRatePanel.title -eq 'Tool failure rate %' -and $failureRatePanel.fieldConfig.defaults.unit -eq 'percent') 'Panel 6 must display Tool failure rate %.'
+Assert-True ($failureRatePanel.title -eq 'Dispatch failure rate %' -and $failureRatePanel.fieldConfig.defaults.unit -eq 'percent') 'Panel 6 must display Dispatch failure rate %.'
 Assert-ThresholdSteps $failureRatePanel @(
     [pscustomobject]@{ color = 'green'; value = $null },
     [pscustomobject]@{ color = 'orange'; value = 1 },
@@ -119,8 +120,7 @@ foreach ($id in @(2, 3)) {
 
 $coveragePanel = @($statPanels | Where-Object id -eq 17)[0]
 $coveragePolicies = @{
-    'Failed turns' = @('green', 'red')
-    'missing_turn_or_root' = @('green', 'orange')
+    'Missing terminal / outcome' = @('green', 'orange')
     'Completed without token usage' = @('green', 'orange')
 }
 foreach ($fieldName in $coveragePolicies.Keys) {
@@ -131,6 +131,8 @@ foreach ($fieldName in $coveragePolicies.Keys) {
     $colors = @($thresholdProperty[0].value.steps | ForEach-Object color)
     Assert-True (($colors -join ',') -eq ($coveragePolicies[$fieldName] -join ',')) "Panel 17 override $fieldName has the wrong color policy."
 }
+$processRateOverride = @($coveragePanel.fieldConfig.overrides | Where-Object { $_.matcher.options -eq 'Process failure rate %' })[0]
+Assert-True (@($processRateOverride.properties | Where-Object { $_.id -eq 'unit' -and $_.value -eq 'percent' }).Count -eq 1) 'Process failure rate must render as a percentage.'
 
 function Get-StatColor($Panel, [double]$Value) {
     if ($Panel.fieldConfig.defaults.color.mode -eq 'fixed') { return $Panel.fieldConfig.defaults.color.fixedColor }
@@ -192,6 +194,8 @@ Assert-True (-not $singleProject.Warning -and $singleProject.Selected -ceq 'C:\w
 $multipleProjects = Get-SyntheticProjectState -TagNames @('cwd') -TagValues @('C:\work\alpha', 'D:\work\beta', 'c:\work\alpha', 'C:\work\alpha')
 Assert-True (-not $multipleProjects.Warning -and $multipleProjects.Projects.Count -eq 3) 'Multi-project Tempo state must expose the unique project list.'
 Assert-True ($multipleProjects.Projects -ccontains 'C:\work\alpha' -and $multipleProjects.Projects -ccontains 'c:\work\alpha') 'Windows project paths must remain case-sensitive and exact.'
+$worktreeProjects = Get-SyntheticProjectState -TagNames @('cwd') -TagValues @('fixture://project', 'fixture://worktrees/task/project')
+Assert-True ($worktreeProjects.Projects.Count -eq 2 -and $worktreeProjects.Projects -ccontains 'fixture://project' -and $worktreeProjects.Projects -ccontains 'fixture://worktrees/task/project') 'Saved project and worktree cwd must remain separate exact scopes.'
 
 'dashboard project states: empty, single, multiple PASS'
 
@@ -229,6 +233,7 @@ $breakdownText = (@($breakdown.targets | ForEach-Object {
     "$query $expression"
 }) -join ' ')
 Assert-True ($breakdownText -match 'run_sampling_request' -and $breakdownText -match 'dispatch_tool_call_with_terminal_outcome' -and $breakdownText -match 'traceIdHidden') 'Trace-ID time breakdown drifted.'
+Assert-True ($breakdown.title -match 'cumulative' -and $breakdown.description -match 'not additive' -and $breakdownText -notmatch 'other_overhead') 'Dashboard components must be labeled cumulative and must not invent additive other time.'
 
 $tokenPanel = @($dashboard.panels | Where-Object id -eq 9)[0]
 $tokenText = (@($tokenPanel.targets | ForEach-Object {
@@ -296,5 +301,14 @@ foreach ($id in @(1,2,7,11,13,17)) {
     Assert-True ($sql -match "WHEN failed.traceIdHidden IS NOT NULL THEN 'failed'" -and $sql -match "ELSE 'unclassified'" -and $sql -notmatch 'grace|NOW\(') "Lifecycle panel $id must use the same failure precedence without age heuristics."
 }
 $coverage = @($dashboard.panels | Where-Object id -eq 17)[0]
-Assert-True ($coverage.targets[-1].expression -match 'missing_turn_or_root' -and $coverage.targets[-1].expression -match 'Completed without token usage') 'Lifecycle coverage must display missing signals and missing tokens separately.'
+foreach ($refId in @('E','L','Q','O','N')) {
+    Assert-True (@($coverage.targets | Where-Object refId -eq $refId).Count -eq 1) "Coverage query $refId is missing."
+}
+$coverageSql = @($coverage.targets | Where-Object refId -eq 'Z')[0].expression
+foreach ($field in @('Explicit terminal','Legacy completion','Missing terminal / outcome','Process failure rate %','Missing command outcomes')) {
+    Assert-True ($coverageSql -match [regex]::Escape($field)) "Coverage output '$field' is missing."
+}
+Assert-True ($coverageSql -match 'ELSE NULL' -and $coverageSql -match 'MAX\(command_outcomes\.count\) = MAX\(command_calls\.count\)') 'Process failure rate must be null until command outcome coverage is complete.'
+Assert-True ($coverageSql -notmatch 'basename|split_part|regexp_extract') 'Dashboard must not merge worktree cwd by directory name.'
+Assert-True ($coverage.options.reduceOptions.calcs[0] -eq 'lastNotNull') 'Coverage panel must preserve null process failure rate as no-data.'
 'lifecycle dashboard contract: PASS'

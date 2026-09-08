@@ -24,6 +24,7 @@
           "uid": "codex-projects"
         },
         "definition": "",
+        "description": "Exact span.cwd. A Codex worktree is a separate cwd and is not merged with a saved project merely because the final directory name matches.",
         "includeAll": false,
         "label": "Project cwd",
         "multi": false,
@@ -49,7 +50,7 @@
   "timezone": "browser",
   "title": "Codex Overview",
   "uid": "codex-overview",
-  "version": 23,
+  "version": 24,
   "panels": [
     {
       "datasource": {
@@ -112,7 +113,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }"
         },
         {
           "refId": "F",
@@ -125,7 +126,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
         },
         {
           "refId": "X",
@@ -230,7 +231,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }"
         },
         {
           "refId": "F",
@@ -243,7 +244,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
         },
         {
           "refId": "X",
@@ -342,7 +343,7 @@
             "uid": "tempo"
           },
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\")",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\")",
           "queryType": "traceql",
           "refId": "A",
           "exemplars": 0,
@@ -427,7 +428,7 @@
           },
           "hide": true,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\")",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\")",
           "queryType": "traceql",
           "refId": "A",
           "exemplars": 0,
@@ -440,7 +441,7 @@
           },
           "hide": true,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\")",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\")",
           "queryType": "traceql",
           "refId": "B",
           "exemplars": 0,
@@ -567,7 +568,7 @@
           },
           "noValue": "\u2014",
           "unit": "percent",
-          "displayName": "Tool failure rate %",
+          "displayName": "Dispatch failure rate %",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -687,9 +688,9 @@
           "hide": false
         }
       ],
-      "title": "Tool failure rate %",
+      "title": "Dispatch failure rate %",
       "type": "stat",
-      "description": "100 \u00d7 failures / calls for terminal top-level outcomes in one canonical tool-call set. failures counts event.success = false; calls counts all calls. Returns null when calls = 0."
+      "description": "100 \u00d7 dispatch failures / calls for terminal top-level outcomes. A dispatch failure means event.success = false; it does not reveal a shell command exit status. Returns null when calls = 0."
     },
     {
       "id": 16,
@@ -703,14 +704,14 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "## ${cwd:text}\n\n**from:** `${__from:date:iso}`  \n**as_of:** `${__to:date:iso}`\n\nKPI include completed turns only and stay unset while no project is selected. For a repeatable snapshot, select an **absolute** dashboard time range; auto-refresh remains 10s but the bounds do not move.\n\n**Status:** explicit terminal outcome, independent of tokens. `missing_turn_or_root` means unclassified, never zero completed activity. Legacy completion and bounded-search limits are documented in METRIC_CONTRACT.md."
+        "content": "## ${cwd:text}\n\n**from:** `${__from:date:iso}`  \n**as_of:** `${__to:date:iso}`\n\nKPI include completed turns only and stay unset while no project is selected. For a repeatable snapshot, select an **absolute** dashboard time range; auto-refresh remains 10s but the bounds do not move.\n\n**Project cwd is exact:** a Codex worktree is a separate cwd and is not merged with the saved project by folder name.\n\n**Coverage:** explicit terminal, legacy completion, and missing outcome are separate. Dispatch failure means `event.success=false`; shell exit status remains unavailable unless instrumentation exports safe `process.exit_code` or `process.success`."
       }
     },
     {
       "id": 17,
       "type": "stat",
       "title": "Turn status and coverage",
-      "description": "Explicit terminal outcome joined to Project cwd by Trace ID. Legacy token-bearing session_task.turn is a compatibility fallback. Failure wins; no age-based completion. Search bound: 500 traces / 100 spans per span set.",
+      "description": "Coverage separates stable codex.turn.terminal v1, legacy token-bearing session_task.turn, and missing terminal/outcome. Process failure rate is null unless every bounded shell call exports safe process.exit_code or process.success. Search bound: 500 traces / 100 spans per set.",
       "datasource": {
         "type": "tempo",
         "uid": "tempo"
@@ -759,23 +760,14 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Failed turns"
+              "options": "Explicit terminal"
             },
             "properties": [
               {
-                "id": "thresholds",
+                "id": "color",
                 "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 1
-                    }
-                  ]
+                  "mode": "fixed",
+                  "fixedColor": "blue"
                 }
               }
             ]
@@ -783,7 +775,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "missing_turn_or_root"
+              "options": "Missing terminal / outcome"
             },
             "properties": [
               {
@@ -827,6 +819,33 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Process failure rate %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "orange", "value": 1 },
+                    { "color": "red", "value": 5 }
+                  ]
+                }
+              }
+            ]
           }
         ]
       },
@@ -855,7 +874,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }"
         },
         {
           "refId": "F",
@@ -868,7 +887,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
         },
         {
           "refId": "X",
@@ -897,13 +916,63 @@
           "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }"
         },
         {
+          "refId": "E",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"completed\" || span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"completed\" || span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+        },
+        {
+          "refId": "L",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }) | { name = \"session_task.turn\" && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)) }"
+        },
+        {
+          "refId": "Q",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.tool_name =~ \"^(shell|exec|exec_command|write_stdin)$\" }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.tool_name =~ \"^(shell|exec|exec_command|write_stdin)$\" }"
+        },
+        {
+          "refId": "O",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.tool_name =~ \"^(shell|exec|exec_command|write_stdin)$\" && (span.\"process.exit_code\" != nil || span.\"process.success\" != nil) }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.tool_name =~ \"^(shell|exec|exec_command|write_stdin)$\" && (span.\"process.exit_code\" != nil || span.\"process.success\" != nil) }"
+        },
+        {
+          "refId": "N",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "hide": true,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"dispatch_tool_call_with_terminal_outcome\" && event.tool_name =~ \"^(shell|exec|exec_command|write_stdin)$\" && (span.\"process.exit_code\" != 0 || span.\"process.success\" = false) }) | { name = \"dispatch_tool_call_with_terminal_outcome\" && event.tool_name =~ \"^(shell|exec|exec_command|write_stdin)$\" && (span.\"process.exit_code\" != 0 || span.\"process.success\" = false) }"
+        },
+        {
           "refId": "Z",
           "datasource": {
             "type": "__expr__",
             "uid": "__expr__"
           },
           "type": "sql",
-          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden) SELECT SUM(CASE WHEN status <> 'completed' THEN 1 ELSE 0 END) AS `Failed / unclassified`, SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS `Failed turns`, SUM(CASE WHEN status = 'unclassified' THEN 1 ELSE 0 END) AS `missing_turn_or_root`, SUM(CASE WHEN status = 'completed' AND token_status = 'missing' THEN 1 ELSE 0 END) AS `Completed without token usage` FROM states",
+          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), explicit_terminal AS (SELECT traceIdHidden FROM E GROUP BY traceIdHidden), legacy_rows AS (SELECT traceIdHidden FROM L GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status, CASE WHEN explicit_terminal.traceIdHidden IS NOT NULL THEN 'explicit' WHEN legacy_rows.traceIdHidden IS NOT NULL THEN 'legacy' ELSE 'missing' END AS completion_signal FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden LEFT JOIN explicit_terminal ON activity.traceIdHidden = explicit_terminal.traceIdHidden LEFT JOIN legacy_rows ON activity.traceIdHidden = legacy_rows.traceIdHidden), command_calls AS (SELECT COUNT(*) AS count FROM Q), command_outcomes AS (SELECT COUNT(*) AS count FROM O), process_failures AS (SELECT COUNT(*) AS count FROM N) SELECT SUM(CASE WHEN completion_signal = 'explicit' THEN 1 ELSE 0 END) AS `Explicit terminal`, SUM(CASE WHEN completion_signal = 'legacy' THEN 1 ELSE 0 END) AS `Legacy completion`, SUM(CASE WHEN completion_signal = 'missing' THEN 1 ELSE 0 END) AS `Missing terminal / outcome`, SUM(CASE WHEN status = 'completed' AND token_status = 'missing' THEN 1 ELSE 0 END) AS `Completed without token usage`, CASE WHEN MAX(command_calls.count) > 0 AND MAX(command_outcomes.count) = MAX(command_calls.count) THEN 100.0 * MAX(process_failures.count) / MAX(command_calls.count) ELSE NULL END AS `Process failure rate %`, CASE WHEN MAX(command_calls.count) > MAX(command_outcomes.count) THEN MAX(command_calls.count) - MAX(command_outcomes.count) ELSE 0 END AS `Missing command outcomes` FROM states CROSS JOIN command_calls CROSS JOIN command_outcomes CROSS JOIN process_failures",
           "hide": false
         }
       ]
@@ -987,12 +1056,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "failures"
+              "options": "dispatch_failures"
             },
             "properties": [
               {
                 "id": "displayName",
-                "value": "Failures"
+                "value": "Dispatch failures"
               }
             ]
           },
@@ -1083,7 +1152,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }"
         },
         {
           "refId": "F",
@@ -1096,7 +1165,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
         },
         {
           "refId": "X",
@@ -1170,7 +1239,7 @@
             "uid": "__expr__"
           },
           "type": "sql",
-          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden) , rounds AS (SELECT traceIdHidden, COUNT(*) AS model_rounds FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden, COUNT(*) AS tool_calls FROM C GROUP BY traceIdHidden), failures AS (SELECT traceIdHidden, COUNT(*) AS failures FROM D GROUP BY traceIdHidden) SELECT states.time, states.duration, states.traceIdHidden, states.status, states.token_status, COALESCE(rounds.model_rounds, 0) AS model_rounds, COALESCE(tools.tool_calls, 0) AS tool_calls, COALESCE(failures.failures, 0) AS failures FROM states LEFT JOIN rounds ON states.traceIdHidden = rounds.traceIdHidden LEFT JOIN tools ON states.traceIdHidden = tools.traceIdHidden LEFT JOIN failures ON states.traceIdHidden = failures.traceIdHidden ORDER BY states.time DESC",
+          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden) , rounds AS (SELECT traceIdHidden, COUNT(*) AS model_rounds FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden, COUNT(*) AS tool_calls FROM C GROUP BY traceIdHidden), failures AS (SELECT traceIdHidden, COUNT(*) AS dispatch_failures FROM D GROUP BY traceIdHidden) SELECT states.time, states.duration, states.traceIdHidden, states.status, states.token_status, COALESCE(rounds.model_rounds, 0) AS model_rounds, COALESCE(tools.tool_calls, 0) AS tool_calls, COALESCE(failures.dispatch_failures, 0) AS dispatch_failures FROM states LEFT JOIN rounds ON states.traceIdHidden = rounds.traceIdHidden LEFT JOIN tools ON states.traceIdHidden = tools.traceIdHidden LEFT JOIN failures ON states.traceIdHidden = failures.traceIdHidden ORDER BY states.time DESC",
           "hide": false
         }
       ],
@@ -1238,7 +1307,7 @@
             "uid": "tempo"
           },
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | avg_over_time(span:duration) by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) } | avg_over_time(span:duration) by (span.model)",
           "queryType": "traceql",
           "refId": "A"
         }
@@ -1366,7 +1435,7 @@
           },
           "exemplars": 0,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\") by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\") by (span.model)",
           "queryType": "traceql",
           "refId": "A"
         },
@@ -1377,7 +1446,7 @@
           },
           "exemplars": 0,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\") by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\") by (span.model)",
           "queryType": "traceql",
           "refId": "B"
         },
@@ -1388,7 +1457,7 @@
           },
           "exemplars": 0,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.output_tokens\") by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) } | sum_over_time(span.\"codex.turn.token_usage.output_tokens\") by (span.model)",
           "queryType": "traceql",
           "refId": "C"
         },
@@ -1399,7 +1468,7 @@
           },
           "exemplars": 0,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.reasoning_output_tokens\") by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) } | sum_over_time(span.\"codex.turn.token_usage.reasoning_output_tokens\") by (span.model)",
           "queryType": "traceql",
           "refId": "D"
         },
@@ -1410,7 +1479,7 @@
           },
           "exemplars": 0,
           "metricsQueryType": "range",
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (span.model)",
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (span.model)",
           "queryType": "traceql",
           "refId": "E"
         },
@@ -1562,7 +1631,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }"
         },
         {
           "refId": "F",
@@ -1575,7 +1644,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
         },
         {
           "refId": "X",
@@ -1685,7 +1754,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Failures"
+                "value": "Dispatch failures"
               }
             ]
           }
@@ -1724,16 +1793,16 @@
           "refId": "A"
         }
       ],
-      "title": "Tool failures over time",
+      "title": "Tool dispatch failures over time",
       "type": "timeseries",
-      "description": "Failed terminal top-level tool outcomes for the selected project."
+      "description": "Dispatch failures (event.success = false) for terminal top-level tool outcomes. Shell process exit status is a separate coverage axis."
     },
     {
       "datasource": {
         "type": "tempo",
         "uid": "tempo"
       },
-      "description": "Trace-ID join: turn duration, run_sampling_request, terminal tool duration, and max(turn - sampling - tools, 0).",
+      "description": "Trace-ID join of turn duration with cumulative sampling and tool-span durations. Components may overlap and are not additive; use the hydrated report for a non-overlapping wall-clock union.",
       "fieldConfig": {
         "defaults": {},
         "overrides": [
@@ -1777,7 +1846,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Model sampling"
+                "value": "Model sampling (cumulative)"
               },
               {
                 "id": "unit",
@@ -1793,23 +1862,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Tool execution"
-              },
-              {
-                "id": "unit",
-                "value": "ns"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "other_overhead_ns"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Other overhead"
+                "value": "Tool spans (cumulative)"
               },
               {
                 "id": "unit",
@@ -1876,7 +1929,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"completed\" || (name = \"session_task.turn\" && span.\"codex.turn.status\" = nil && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil)))) }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }) | { (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && span.\"codex.turn.status\" = \"completed\") || (name = \"session_task.turn\" && (span.\"codex.turn.status\" = nil || span.\"codex.turn.status\" = \"completed\") && (span.\"codex.turn.token_usage.total_tokens\" != nil || (span.\"codex.turn.token_usage.input_tokens\" != nil && span.\"codex.turn.token_usage.output_tokens\" != nil))) }"
         },
         {
           "refId": "F",
@@ -1889,7 +1942,7 @@
           "limit": 500,
           "spss": 100,
           "hide": true,
-          "query": "({ span.cwd = \"${cwd:regex}\" } && { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { (name = \"session_task.turn\" || (name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1)) && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }) | { name = \"codex.turn.terminal\" && span.\"codex.turn.signal_version\" = 1 && (span.\"codex.turn.status\" = \"failed\" || span.\"codex.turn.status\" = \"interrupted\") }"
         },
         {
           "refId": "X",
@@ -1950,7 +2003,7 @@
             "uid": "__expr__"
           },
           "type": "sql",
-          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden) , model AS (SELECT traceIdHidden, SUM(duration) AS model_sampling_ns FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden, SUM(duration) AS tool_execution_ns FROM C GROUP BY traceIdHidden) SELECT states.time, states.duration, states.traceIdHidden, COALESCE(model.model_sampling_ns, 0) AS model_sampling_ns, COALESCE(tools.tool_execution_ns, 0) AS tool_execution_ns, CASE WHEN states.duration - COALESCE(model.model_sampling_ns, 0) - COALESCE(tools.tool_execution_ns, 0) > 0 THEN states.duration - COALESCE(model.model_sampling_ns, 0) - COALESCE(tools.tool_execution_ns, 0) ELSE 0 END AS other_overhead_ns FROM states LEFT JOIN model ON states.traceIdHidden = model.traceIdHidden LEFT JOIN tools ON states.traceIdHidden = tools.traceIdHidden WHERE states.status = 'completed' ORDER BY states.time DESC",
+          "expression": "WITH activity AS (SELECT traceIdHidden, MAX(time) AS time FROM (SELECT traceIdHidden, time FROM X UNION ALL SELECT traceIdHidden, time FROM P UNION ALL SELECT traceIdHidden, time FROM F) AS observed GROUP BY traceIdHidden), success_ranked AS (SELECT traceIdHidden, time, duration, ROW_NUMBER() OVER (PARTITION BY traceIdHidden ORDER BY time DESC, duration DESC) AS rank_in_trace FROM P), success AS (SELECT traceIdHidden, time, duration FROM success_ranked WHERE rank_in_trace = 1), failed AS (SELECT traceIdHidden FROM F GROUP BY traceIdHidden), token_usage_rows AS (SELECT traceIdHidden FROM U GROUP BY traceIdHidden), states AS (SELECT activity.traceIdHidden, COALESCE(success.time, activity.time) AS time, success.duration, CASE WHEN failed.traceIdHidden IS NOT NULL THEN 'failed' WHEN success.traceIdHidden IS NOT NULL THEN 'completed' ELSE 'unclassified' END AS status, CASE WHEN token_usage_rows.traceIdHidden IS NULL THEN 'missing' ELSE 'available' END AS token_status FROM activity LEFT JOIN success ON activity.traceIdHidden = success.traceIdHidden LEFT JOIN failed ON activity.traceIdHidden = failed.traceIdHidden LEFT JOIN token_usage_rows ON activity.traceIdHidden = token_usage_rows.traceIdHidden) , model AS (SELECT traceIdHidden, SUM(duration) AS model_sampling_ns FROM B GROUP BY traceIdHidden), tools AS (SELECT traceIdHidden, SUM(duration) AS tool_execution_ns FROM C GROUP BY traceIdHidden) SELECT states.time, states.duration, states.traceIdHidden, COALESCE(model.model_sampling_ns, 0) AS model_sampling_ns, COALESCE(tools.tool_execution_ns, 0) AS tool_execution_ns FROM states LEFT JOIN model ON states.traceIdHidden = model.traceIdHidden LEFT JOIN tools ON states.traceIdHidden = tools.traceIdHidden WHERE states.status = 'completed' ORDER BY states.time DESC",
           "hide": false
         }
       ],
@@ -1968,15 +2021,14 @@
               "time": 0,
               "duration": 1,
               "tool_execution_ns": 3,
-              "other_overhead_ns": 4,
-              "traceIdHidden": 5,
+              "traceIdHidden": 4,
               "model_sampling_ns": 2
             },
             "renameByName": {}
           }
         }
       ],
-      "title": "Turn time breakdown (approx.)",
+      "title": "Turn component durations (cumulative)",
       "type": "table"
     },
     {
@@ -1984,7 +2036,7 @@
         "type": "tempo",
         "uid": "tempo"
       },
-      "description": "Project-scoped terminal failures. Raw arguments/output are intentionally absent; bounded failure class and reason remain with a Trace ID link.",
+      "description": "Project-scoped dispatch failures (event.success = false). Raw arguments/output are intentionally absent; bounded failure class and reason remain with a Trace ID link. A successful dispatch does not prove a shell command exited successfully.",
       "fieldConfig": {
         "defaults": {},
         "overrides": [
@@ -2148,14 +2200,14 @@
           }
         }
       ],
-      "title": "Failed tool calls",
+      "title": "Dispatch-failed tool calls",
       "type": "table"
     },
     {
       "id": 18,
       "type": "timeseries",
-      "title": "Tool calls / failures by tool",
-      "description": "Terminal top-level outcomes grouped by bounded tool name and scoped to the selected project.",
+      "title": "Tool calls / dispatch failures by tool",
+      "description": "Terminal top-level outcomes and event.success=false dispatch failures grouped by bounded tool name and scoped to the selected project.",
       "datasource": {
         "type": "tempo",
         "uid": "tempo"
@@ -2191,7 +2243,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Failures \u00b7 ${__field.labels[\"event.tool_name\"]}"
+                "value": "Dispatch failures \u00b7 ${__field.labels[\"event.tool_name\"]}"
               }
             ]
           }

@@ -1,6 +1,6 @@
 # Codex observability metric contract
 
-Contract/report schema: `3.0`.
+Contract/report schema: `4.0`.
 
 This contract is the source of truth for the provisioned dashboard and
 `scripts/codex-performance-report.ps1`. The implementation is diagnostic, not
@@ -17,6 +17,11 @@ window.
 - A trace belongs to a project only when it contains a span whose `span.cwd`
   equals the selected `Project cwd`. Related spans and log events are joined to
   the project through the same `trace_id`; they are not required to repeat cwd.
+- Project scope is exact and case-sensitive. A Codex worktree such as
+  `fixture://worktrees/task/project` is a different scope from
+  `fixture://project`. The dashboard and report never merge paths by basename.
+  A future stable repository identity may allow an explicit aggregate view, but
+  directory-name similarity is not evidence that two cwd values are one project.
 - The canonical turn key is `trace_id`. If more than one
   lifecycle/token span exists in a trace, explicit failure takes precedence,
   followed by explicit completion, followed by legacy completion. The newest
@@ -27,11 +32,18 @@ window.
 
 | Turn state | Rule |
 |---|---|
-| `completed` | An explicit terminal span says `completed`, independent of token fields. For older instrumentation only, a token-bearing `session_task.turn` with no explicit status is accepted with `legacy_completion_signal`. |
-| `failed` | An explicit terminal span says `failed` or `interrupted`. This wins over any completed/legacy candidate in the same trace; contradictory signals emit `conflicting_terminal_signals`. A failed tool or model request alone does not prove turn failure. |
+| `completed` | An **explicit completed turn** is only `codex.turn.terminal` with supported `codex.turn.signal_version` and `codex.turn.status=completed`, independent of token fields. A **legacy completed turn** is a token-bearing `session_task.turn`; it remains visible but emits `legacy_completion_signal` and is never called explicit. |
+| `failed` | A supported `codex.turn.terminal` says `failed` or `interrupted`. This wins over any completed/legacy candidate in the same trace; contradictory signals emit `conflicting_terminal_signals`. A failed tool or model request alone does not prove turn failure. |
 | `unclassified` | Scoped exported activity exists, but neither recognized terminal signal nor legacy completion is available. Emit `missing_turn_or_root` for every such trace, regardless of its age. |
 
-`active` and `incomplete` age buckets are removed in schema 3.0. An exported span
+`completionSignals` reports three independent coverage counts: `explicit` for a
+supported terminal marker, `legacy` for token-bearing `session_task.turn` traces
+without a supported terminal marker, and `missing` when neither is available.
+Without a stable upstream user-visible/orchestration discriminator, every
+completed trace remains in Turns and `turn_role_unavailable` is emitted. Short
+duration, model name, span count, and directory name are not valid filters.
+
+`active` and `incomplete` age buckets are removed. An exported span
 ending, a root being present, or the passage of time is not evidence of successful
 turn completion. `failedTurns` and `unclassifiedTurns` remain separate in JSON;
 `failedOrUnclassifiedTurns` is their sum in the dashboard coverage panel.
@@ -59,9 +71,9 @@ The local normalized span is `codex.turn.terminal` with:
 - string `codex.turn.status`: `completed`, `failed`, or `interrupted`;
 - explicit start/end timestamps from the lifecycle source.
 
-An explicit `codex.turn.status` on `session_task.turn` is also recognized. This is
-a local instrumentation contract, not a claim that stock Codex exports that
-attribute. Unknown marker versions/statuses remain unclassified.
+An attribute on `session_task.turn` is not promoted to this explicit contract.
+Unknown marker versions/statuses remain unclassified unless the trace separately
+has legacy token-bearing completion evidence.
 
 `convert-codex-turn-terminal.ps1` converts an app-server `turn/completed`
 notification into this minimal OTLP payload. The caller must provide the actual
@@ -97,10 +109,19 @@ Loki logs are enabled or scraped to manufacture that evidence.
 | Total tokens | `sum(total_tokens)` when present, otherwise `sum(input_tokens + output_tokens)` | Completed turns only; the report uses the same per-turn values for its detail and model breakdown. |
 | Cache hit | `100 * sum(cached_input_tokens) / sum(input_tokens)` | Returns `0` for observed zero input and null for missing input/cache. It is not an average of per-turn percentages. |
 | Model rounds | Count of `responses_websocket.stream_request` spans grouped by `trace_id` | Joined by trace ID to completed turns; no parent/descendant requirement. |
-| Model sampling | Sum of `run_sampling_request` span durations grouped by `trace_id` | Joined by trace ID to completed turns. |
+| Model sampling cumulative | Sum of `run_sampling_request` span durations grouped by `trace_id` | Joined by trace ID to completed turns. This is cumulative span time and may overlap tool time. |
 | Tool calls | Count of distinct terminal-outcome call keys grouped by `trace_id` | Only `dispatch_tool_call_with_terminal_outcome`; key is `call_id`, falling back to `span_id`. Nested implementation spans are excluded. |
-| Tool failures | Distinct tool calls whose terminal outcome is unsuccessful | Same project scope and call keys as Tool calls. Retries/recovered attempts are annotations on one top-level call, not extra failures. |
-| Other time | `max(turn_duration - model_sampling - tool_duration, 0)` per completed turn | Components are joined by trace ID. Overlap and instrumentation gaps are reported as coverage warnings. |
+| Tool dispatch failures | Distinct tool calls whose terminal dispatch outcome has `event.success=false` | This measures the tool invocation/result-delivery failure reflected by Codex telemetry. It does not prove the exit status of a delivered shell command. |
+| Process failures | Non-zero safe `process.exit_code`, or `process.success=false`, on recognized shell/exec calls | The rate is null unless every recognized command call has a safe outcome. Missing outcomes produce `process_outcome_coverage_incomplete`. |
+| Combined tool failure rate | Distinct calls failed by dispatch or process outcome divided by all terminal calls | Null when command outcome coverage is partial or unavailable; it must never appear as a healthy zero in that state. `dispatchFailureRatePct` remains separately observable. |
+| Component wall-clock | Union of clipped sampling and tool intervals inside the completed turn interval | Calculated only from hydrated traces. `observedComponentWallClockMs + otherMs = durationMs`, with `otherMs >= 0`. |
+
+`modelSamplingCumulativeMs` and `toolCumulativeDurationMs` are non-additive span
+sums. `modelSamplingWallClockMs`, `toolWallClockMs`, and
+`observedComponentWallClockMs` are interval unions; sampling/tool unions may
+still overlap each other, exposed as `samplingToolOverlapMs`. The dashboard does
+not hydrate complete traces, so it labels its values cumulative and does not
+manufacture an `other` value.
 
 ## Failure and tool fields
 
@@ -112,7 +133,7 @@ Failure rows expose only bounded diagnostic fields:
 - `nested`, `retry_count`, and `recovered`;
 - `trace_id` with a Tempo data link.
 
-Tool analytics are grouped by tool name and report `calls`, `failures`, `p50`,
+Tool analytics are grouped by tool name and report `calls`, `dispatchFailures`, `p50`,
 `p95`, and `max` duration. Successful latency and failed-call counts stay
 separate so a fast failure cannot appear as healthy performance.
 
@@ -135,6 +156,12 @@ The dashboard and report must surface, rather than silently discard:
 - rootless traces and missing turn spans;
 - traces capped by query/span limits or reported partial/oversized by Tempo;
 - component duration greater than turn duration;
+- sampling/tool overlap and search-preview time coverage;
+- missing safe process outcomes, which makes process and combined failure rates unavailable;
+- inability to distinguish user-visible turns from orchestration/setup traces;
+- large hydrated JSON responses (`hydratedSpanCount` and
+  `hydratedPayloadBytes` are diagnostics only; JSON bytes are not Tempo's
+  internal per-trace accounting and are never compared as equivalent units);
 - disagreement between trace-derived and structured-log-derived tool totals.
 
 Each warning includes a machine-readable `code`, `count`, and short message.
@@ -179,6 +206,22 @@ An unavailable full trace fails the report rather than silently falling back
 to incomplete search previews. This recovers events split across stored blocks;
 it cannot recover traces omitted entirely by search limits.
 
+## Desired upstream Codex instrumentation
+
+For fully authoritative delegated-task metrics, Codex should export a minimal,
+bounded contract on the original trace:
+
+- `codex.turn.terminal` with `codex.turn.status` and
+  `codex.turn.signal_version`;
+- a stable user-visible-turn versus orchestration/setup discriminator;
+- safe `process.exit_code` and `process.success` for shell commands;
+- stable `project.root` or repository identity shared by a saved checkout and
+  its Codex worktrees.
+
+The Collector must not synthesize any of these from command output text, model
+name, short duration, span count, or the final directory name. Until the emitter
+provides them, the repository reports legacy/partial/unavailable coverage.
+
 Codex documents structured `codex.tool_result` events and the
 `turn.token_usage`/`tool.call` metric families. The current dashboard also uses
 Codex trace span names that are not a stable public API; schema drift therefore
@@ -198,7 +241,7 @@ README contains failure-rate PromQL for operational diagnosis.
 
 Synthetic project `fixture://regular`, `from=2026-09-04T07:00:00Z`,
 `as_of=2026-09-04T08:00:00Z`: **2 completed, 1 failed/unclassified, 33 tool calls,
-2 tool failures**. There is no `session_task.turn` in this fixture and both
+2 dispatch failures**. There is no `session_task.turn` in this fixture and both
 completed turns lack token usage. In the baseline the third trace is
 unclassified; an added explicit failed signal classifies it as failed without
 changing tool totals. The test runs the dashboard's actual lifecycle SQL in
