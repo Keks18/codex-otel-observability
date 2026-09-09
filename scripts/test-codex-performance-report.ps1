@@ -16,7 +16,7 @@ function Assert-Equal($Actual, $Expected, [string]$Name) {
     if ($Actual -ne $Expected) { throw "$Name expected '$Expected', got '$Actual'." }
 }
 
-Assert-Equal $json1.schemaVersion '4.0' 'schemaVersion'
+Assert-Equal $json1.schemaVersion '5.0' 'schemaVersion'
 Assert-Equal $json1.snapshot.asOf '2026-09-04T08:00:00.0000000+00:00' 'asOf'
 Assert-Equal $json1.summary.completedTurns 1 'completed turns'
 Assert-Equal $json1.summary.failedTurns 0 'failed turns'
@@ -43,6 +43,10 @@ Assert-Equal $json1.tools.failedCalls[0].failureClass 'tool_error' 'failure clas
 Assert-Equal $json1.tools.failedCalls[0].nested $false 'nested exclusion'
 Assert-Equal $json1.tools.failedCalls[0].retryCount 1 'retry count'
 Assert-Equal $json1.tools.failedCalls[0].tool 'shell' 'event tool name on failed call'
+Assert-Equal $json1.agentExecution.coverage 'unavailable' 'stock telemetry agent topology coverage'
+Assert-Equal $json1.agentExecution.agentCount 0 'stock telemetry must not invent agents'
+Assert-Equal @($json1.agentExecution.agents).Count 0 'stock telemetry has no agent rows'
+Assert-Equal @($json1.agentExecution.warnings | Where-Object code -eq 'agent_topology_unavailable')[0].count 1 'stock telemetry emits topology unavailable warning'
 
 function Test-ToolNameSource([string]$Source) {
     $response = Get-Content -Raw $fixture | ConvertFrom-Json
@@ -97,6 +101,9 @@ Assert-Equal $hydrated.turns[0].modelRounds 2 'complete trace rounds'
 Assert-Equal $hydrated.turns[0].modelSamplingCumulativeMs 4000 'complete trace sampling'
 Assert-Equal $hydrated.turns[0].toolCumulativeDurationMs 6000 'duplicate spans and out-of-window activity excluded'
 Assert-Equal $hydrated.turns[0].hydratedSpanCount 14 'hydrated span diagnostics'
+Assert-Equal $hydrated.coverage.hydration.concurrency 4 'hydration concurrency default'
+if ($hydrated.coverage.hydration.totalDurationMs -le 0) { throw 'Total hydration timing diagnostics are missing.' }
+if ($hydrated.coverage.hydration.traces[0].hydrationDurationMs -le 0) { throw 'Per-trace hydration timing diagnostics are missing.' }
 if ($hydrated.turns[0].hydratedPayloadBytes -le 0) { throw 'Hydrated payload byte diagnostics are missing.' }
 if (($hydrated | ConvertTo-Json -Depth 20) -match 'PRIVATE_SENTINEL') { throw 'Raw trace payload leaked into report.' }
 'complete trace hydration regression: PASS'
@@ -164,10 +171,10 @@ try {
     $largeSearch | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $largeSearchPath -Encoding utf8
     $largeTraces | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $largeTracePath -Encoding utf8
     $large = & $reportScript -Project 'fixture://large' -Period 1h -AsOf $asOf -FixturePath $largeSearchPath -TraceFixturePath $largeTracePath -Format json | ConvertFrom-Json
-    Assert-Equal $large.coverage.hydration[0].hydratedSpanCount 1202 'large trace hydrated span count'
+    Assert-Equal $large.coverage.hydration.traces[0].hydratedSpanCount 1202 'large trace hydrated span count'
     Assert-Equal $large.turns[0].traceId $largeTraceId 'large trace ID retained'
-    if ($large.coverage.hydration[0].hydratedPayloadBytes -le 0) { throw 'Large trace payload bytes are missing.' }
-    if ('trace_pressure' -notin @($large.coverage.warnings | ForEach-Object code)) { throw 'Large trace pressure warning is missing.' }
+    if ($large.coverage.hydration.traces[0].hydratedPayloadBytes -le 0) { throw 'Large trace payload bytes are missing.' }
+    if ('span_amplification' -notin @($large.coverage.warnings | ForEach-Object code)) { throw 'Large trace amplification warning is missing.' }
     if (($large | ConvertTo-Json -Depth 20) -match 'synthetic.padding') { throw 'Synthetic padding attribute leaked into the report.' }
     'large trace hydration regression: PASS'
 } finally {

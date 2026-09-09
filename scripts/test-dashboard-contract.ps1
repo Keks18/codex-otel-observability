@@ -39,7 +39,7 @@ $tempoConfig = Get-Content -Raw (Join-Path $repoRoot 'config/tempo.yaml')
 Assert-True ($compose -match 'config/tempo.yaml:/otel-lgtm/tempo-config.yaml:ro') 'Tempo query limits must be provisioned at startup.'
 Assert-True ($tempoConfig -match '(?s)query_frontend:.*search:.*max_duration: 169h.*metrics:.*max_duration: 169h') 'Weekly dashboard ranges require matching trace and metric limits with boundary headroom.'
 Assert-True ($cwd[0].current.isNone -and $cwd[0].current.value -eq '' -and $cwd[0].current.text -match 'Project not selected') 'Project cwd must persist the explicit safe empty state, not a machine-specific path.'
-Assert-True ($dashboard.panels.Count -eq 21) 'Unexpected dashboard panel count.'
+Assert-True ($dashboard.panels.Count -eq 25) 'Unexpected dashboard panel count.'
 Assert-True ($raw -notmatch '>>') 'Strict descendant queries must not be used for trace joins.'
 Assert-True ($raw -notmatch '"type": "loki"') 'Dashboard must not query Loki log bodies.'
 Assert-True ($raw -notmatch '\{\{\.output\}\}|tool_arguments|user_prompt') 'Unbounded/private payload fields are present.'
@@ -277,6 +277,29 @@ foreach ($panel in $toolPanels) {
 }
 
 Assert-True ($linkCount -ge 3) 'Required Trace ID links are missing.'
+
+$agentIntro = @($dashboard.panels | Where-Object id -eq 22)[0]
+$agentKpis = @($dashboard.panels | Where-Object id -eq 23)[0]
+$agentRecords = @($dashboard.panels | Where-Object id -eq 24)[0]
+$agentAvailability = @($dashboard.panels | Where-Object id -eq 25)[0]
+Assert-True ($agentIntro.type -eq 'text' -and $agentIntro.options.content -match 'unavailable' -and $agentIntro.description -match 'inferred') 'Agent execution availability/no-inference text is missing.'
+Assert-True ($agentAvailability.type -eq 'stat' -and $agentAvailability.fieldConfig.defaults.noValue -eq 'Unavailable') 'Agent availability must be a no-evidence stat.'
+Assert-True ($agentAvailability.description -match 'never zero agents' -and $agentAvailability.targets[0].query -match 'codex\.agent\.signal_version') 'Agent availability stat must use observed versioned lifecycle evidence.'
+Assert-True ($agentAvailability.targets[0].queryType -eq 'traceqlSearch' -and $agentAvailability.targets[0].query -notmatch 'count_over_time' -and $agentAvailability.options.reduceOptions.calcs[0] -eq 'count') 'Agent availability must count actual lifecycle rows so no evidence stays unavailable rather than zero.'
+Assert-True ($agentKpis.type -eq 'table' -and $agentKpis.title -match 'observed v1') 'Agent KPI panel is missing.'
+Assert-True ($agentKpis.description -match 'Wait share is intentionally report-only') 'Agent KPI panel must not approximate interval-union wait share.'
+$agentKpiSearch = @($agentKpis.targets | Where-Object refId -eq 'A')[0]
+Assert-True ($agentKpiSearch.query -match 'codex\.agent\.lifecycle' -and $agentKpiSearch.query -match 'codex\.agent\.signal_version' -and $agentKpiSearch.query -match 'span\.cwd = "\$\{cwd:regex\}"') 'Agent KPI search must be exact-project, versioned lifecycle data.'
+$agentKpiSql = @($agentKpis.targets | Where-Object refId -eq 'B')[0]
+foreach ($field in @('Agents','Delegations','Failed / interrupted','Unclassified','Maximum depth')) {
+    Assert-True ($agentKpiSql.expression -match [regex]::Escape($field)) "Agent KPI '$field' is missing."
+}
+Assert-True ($agentRecords.type -eq 'table' -and $agentRecords.title -eq 'Agent execution records') 'Bounded flat agent record table is missing.'
+$agentRecordSearch = @($agentRecords.targets | Where-Object refId -eq 'A')[0]
+foreach ($field in @('codex.agent.instance_id','codex.agent.parent_instance_id','codex.agent.delegation_id','codex.agent.delegation_depth','codex.agent.lifecycle','codex.agent.status')) {
+    Assert-True ($agentRecordSearch.query -match [regex]::Escape($field)) "Agent records do not select $field."
+}
+Assert-True (@($agentRecords.fieldConfig.overrides | Where-Object { $_.matcher.options -eq 'traceIdHidden' }).Count -eq 1) 'Agent records must retain a Tempo Trace ID link.'
 
 $tempoDiscards = @($dashboard.panels | Where-Object id -eq 20)[0]
 Assert-True ($tempoDiscards.datasource.uid -eq 'prometheus' -and $tempoDiscards.type -eq 'timeseries') 'Tempo discard history must use the local Prometheus datasource.'

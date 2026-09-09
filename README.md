@@ -210,14 +210,44 @@ port; the synthetic trace is never sent to the running LGTM stack or the network
 ```
 
 The report captures one UTC `as_of`, uses absolute query bounds, and does not
-upload results. JSON schema `4.0` separates explicit/legacy/missing completion,
+upload results. JSON schema `5.0` separates explicit/legacy/missing completion,
 dispatch failures, process-outcome coverage, and the combined failure rate.
 When any recognized shell command lacks safe exit outcome telemetry, process and
 combined failure rates are null rather than a healthy zero; the observable
-dispatch failure rate remains separate. Hydrated turns include span-count and
-HTTP JSON payload-byte diagnostics plus a non-overlapping interval union for the
-wall-clock breakdown. Cumulative component durations remain explicitly
-non-additive. JSON payload bytes are not Tempo's internal per-trace byte units.
+dispatch failure rate remains separate. Hydrated turns include span-count, HTTP
+JSON payload-byte, and per-trace/total hydration-duration diagnostics plus a
+non-overlapping interval union for the wall-clock breakdown. Cumulative component
+durations remain explicitly non-additive. JSON payload bytes are not Tempo's
+internal per-trace byte units. Hydration uses a bounded Windows PowerShell
+5.1-compatible job pool; the default is four concurrent trace reads and the
+validated maximum is eight. Use `-HydrationConcurrency 1` for a serial diagnostic
+comparison. A `span_amplification` warning is emitted at 10,000 spans or
+15,000,000 HTTP JSON bytes for one hydrated trace.
+
+### Agent execution (optional upstream contract)
+
+The report and provisioned dashboard include a compact **Agent execution**
+section for the versioned `codex.agent.lifecycle` v1 contract. It shows bounded
+flat rows, outcome/coverage, and a Tempo Trace ID link; it never guesses a tree.
+Agent IDs are scoped by Trace ID, so matching opaque IDs in separate traces never
+merge. The availability stat uses observed lifecycle rows rather than a metrics
+series, so absent evidence is rendered as **Unavailable**, never a healthy zero.
+Stock Codex telemetry does not currently guarantee this contract, so a gray
+unavailable value or report `unavailable` is expected until an authoritative
+emitter exports trace-local opaque agent/delegation IDs, explicit lifecycle and
+terminal status, bounded role/kind, and interval kind. Exact **Project cwd**
+continues to scope the view; an optional opaque `codex.project.identity` may
+relate checkout/worktree execution only in the report contract and never merges
+the dashboard selector.
+
+Agent timing is authoritative only from the earliest supported `spawn` start to
+the selected supported `complete` end. The report unions clipped `active` and
+`wait` intervals at nanosecond precision, publishes a wait share only when that
+union completely and consistently covers the lifecycle, derives that share from
+the unrounded unions, and otherwise reports
+partial/unavailable timing with a null wait share. Per-agent rows expose
+`uncoveredWallClockMs`: zero means measured complete coverage, a positive value
+is a measured gap, and null means the timing cannot be established.
 
 ## Upstream instrumentation gaps
 

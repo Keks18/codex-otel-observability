@@ -2663,6 +2663,277 @@
       ],
       "title": "Collector exporter queue",
       "type": "timeseries"
+    },
+    {
+      "id": 22,
+      "type": "text",
+      "title": "Agent execution",
+      "description": "Optional, versioned agent lifecycle telemetry. No topology or outcome is inferred from trace hierarchy, thread/turn IDs, timing, model, or cwd names.",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 113
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Optional agent contract\n\nGray/no rows means **unavailable**, not zero agents. This dashboard shows only observed v1 lifecycle records. Use the report for canonical interval unions, validation warnings, and partial/cyclic topology; no tree is rendered here."
+      }
+    },
+    {
+      "id": 23,
+      "type": "table",
+      "title": "Agent execution KPIs (observed v1)",
+      "description": "Distinct opaque agent and delegation IDs from supported lifecycle records. Failed/interrupted requires an explicit complete status; an observed agent without one is unclassified. Wait share is intentionally report-only because this panel cannot calculate interval unions authoritatively.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 14,
+        "x": 6,
+        "y": 113
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "—",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "refId": "A",
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"codex.agent.lifecycle\" && span.\"codex.agent.signal_version\" = 1 }) | { name = \"codex.agent.lifecycle\" && span.\"codex.agent.signal_version\" = 1 } | select(span.\"codex.agent.instance_id\", span.\"codex.agent.delegation_id\", span.\"codex.agent.delegation_depth\", span.\"codex.agent.lifecycle\", span.\"codex.agent.status\")"
+        },
+        {
+          "refId": "B",
+          "type": "sql",
+          "expression": "WITH agents AS (SELECT traceIdHidden, `span.codex.agent.instance_id` AS agent_id, MAX(`span.codex.agent.delegation_id`) AS delegation_id, MAX(`span.codex.agent.delegation_depth`) AS depth, MAX(CASE WHEN `span.codex.agent.lifecycle` = 'complete' AND `span.codex.agent.status` IN ('failed', 'interrupted') THEN 1 ELSE 0 END) AS failed, MAX(CASE WHEN `span.codex.agent.lifecycle` = 'complete' AND `span.codex.agent.status` = 'completed' THEN 1 ELSE 0 END) AS completed FROM A WHERE `span.codex.agent.instance_id` IS NOT NULL GROUP BY traceIdHidden, `span.codex.agent.instance_id`) SELECT COUNT(*) AS Agents, COUNT(DISTINCT delegation_id) AS Delegations, SUM(failed) AS `Failed / interrupted`, SUM(CASE WHEN completed = 0 AND failed = 0 THEN 1 ELSE 0 END) AS Unclassified, MAX(depth) AS `Maximum depth` FROM agents"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Agents",
+                "Delegations",
+                "Failed / interrupted",
+                "Unclassified",
+                "Maximum depth"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "type": "stat",
+      "title": "Agent execution availability",
+    "description": "Observed supported v1 lifecycle evidence in the selected project. A gray Unavailable value means no evidence, never zero agents; inspect the adjacent KPI table and report for partial coverage warnings.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
+        "y": 113
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+        "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "count"
+          ],
+          "fields": "span.codex.agent.instance_id"
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "refId": "A",
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"codex.agent.lifecycle\" && span.\"codex.agent.signal_version\" = 1 }) | { name = \"codex.agent.lifecycle\" && span.\"codex.agent.signal_version\" = 1 } | select(span.\"codex.agent.instance_id\")"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "table",
+      "title": "Agent execution records",
+      "description": "Bounded flat lifecycle records from the optional contract. The report validates parent/depth/timing and produces one canonical agent row; this table does not infer or repair topology.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 118
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "traceIdHidden"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace ID"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "internal": {
+                      "datasourceName": "Tempo",
+                      "datasourceUid": "tempo",
+                      "query": {
+                        "query": "${__value.raw}",
+                        "queryType": "traceql"
+                      }
+                    },
+                    "title": "Open trace in Tempo"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Time"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "refId": "A",
+          "queryType": "traceqlSearch",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 100,
+          "query": "({ span.cwd = \"${cwd:regex}\" } && { name = \"codex.agent.lifecycle\" && span.\"codex.agent.signal_version\" = 1 }) | { name = \"codex.agent.lifecycle\" && span.\"codex.agent.signal_version\" = 1 } | select(span.\"codex.agent.instance_id\", span.\"codex.agent.parent_instance_id\", span.\"codex.agent.delegation_id\", span.\"codex.agent.delegation_depth\", span.\"codex.agent.role\", span.\"codex.agent.task_kind\", span.\"codex.agent.lifecycle\", span.\"codex.agent.status\", span.model, span.\"codex.agent.reasoning_effort\", span.\"codex.agent.interval_kind\")"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "name": true,
+              "spanID": true,
+              "traceName": true,
+              "traceService": true
+            },
+            "indexByName": {
+              "time": 0,
+              "span.codex.agent.instance_id": 1,
+              "span.codex.agent.parent_instance_id": 2,
+              "span.codex.agent.delegation_id": 3,
+              "span.codex.agent.delegation_depth": 4,
+              "span.codex.agent.role": 5,
+              "span.codex.agent.task_kind": 6,
+              "span.codex.agent.lifecycle": 7,
+              "span.codex.agent.status": 8,
+              "model": 9,
+              "span.codex.agent.reasoning_effort": 10,
+              "span.codex.agent.interval_kind": 11,
+              "duration": 12,
+              "traceIdHidden": 13
+            },
+            "renameByName": {
+              "time": "Time",
+              "span.codex.agent.instance_id": "Agent ID",
+              "span.codex.agent.parent_instance_id": "Parent agent",
+              "span.codex.agent.delegation_id": "Delegation",
+              "span.codex.agent.delegation_depth": "Depth",
+              "span.codex.agent.role": "Role",
+              "span.codex.agent.task_kind": "Task kind",
+              "span.codex.agent.lifecycle": "Lifecycle",
+              "span.codex.agent.status": "Terminal status",
+              "model": "Model",
+              "span.codex.agent.reasoning_effort": "Reasoning effort",
+              "span.codex.agent.interval_kind": "Interval kind",
+              "duration": "Duration"
+            }
+          }
+        }
+      ]
     }
   ]
 }

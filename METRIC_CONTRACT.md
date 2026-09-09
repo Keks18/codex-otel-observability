@@ -1,6 +1,6 @@
 # Codex observability metric contract
 
-Contract/report schema: `4.0`.
+Contract/report schema: `5.0`.
 
 This contract is the source of truth for the provisioned dashboard and
 `scripts/codex-performance-report.ps1`. The implementation is diagnostic, not
@@ -95,6 +95,82 @@ completed by a dashboard change alone. They remain visible as unclassified until
 an authoritative, correctly correlated lifecycle signal is available. No raw
 Loki logs are enabled or scraped to manufacture that evidence.
 
+## Optional agent execution lifecycle v1
+
+Multi-agent execution is opt-in. The normalized lifecycle span is
+`codex.agent.lifecycle` and has integer `codex.agent.signal_version=1`.
+Unsupported versions and missing required fields are unknown; they must not be
+coerced into this contract.
+
+Each lifecycle record carries an opaque, trace-local
+`codex.agent.instance_id`. Opaque IDs, bounded role/kind, and reasoning effort
+are ASCII enum-like tokens (`A-Z`, `a-z`, `0-9`, `.`, `_`, `:`, `-`) of at most
+96 characters; the report suppresses invalid values with a coverage warning.
+It may additionally carry opaque
+`codex.agent.parent_instance_id` and `codex.agent.delegation_id`, non-negative
+`codex.agent.delegation_depth`, and one bounded `codex.agent.role` or
+`codex.agent.task_kind`. The only lifecycle values are `spawn`, `start`,
+`wait`, `join`, and `complete` in `codex.agent.lifecycle`. A `complete` record
+has explicit `codex.agent.status` of `completed`, `failed`, or `interrupted`.
+`model` and `codex.agent.reasoning_effort` are optional bounded fields.
+
+The canonical agent key is `(trace_id, codex.agent.instance_id)`. Parent lookup,
+depth validation, delegation counting, tool/model attribution, cycles, sorting,
+and output rows use that composite key. The same opaque ID in another trace is
+a different agent and must never be merged.
+
+The authoritative timing lifecycle starts at the earliest supported `spawn` span
+start and ends at the end of the selected supported `complete` span. A record
+whose `codex.agent.interval_kind` is `active` or `wait` contributes its clipped
+span interval to the corresponding wall-clock union. All clipping, union,
+overlap, and gap comparisons use original nanoseconds before output values are
+rounded. Overlapping intervals are unified, never summed within the same kind.
+Wait share is derived from the unrounded nanosecond union durations; rounded
+millisecond display fields are never fed back into that ratio.
+`available` timing requires at least one classified interval and a combined
+active/wait union that completely covers those lifecycle bounds. A gap, overlap
+between active and wait unions, invalid interval, or interval outside the bounds
+is contradictory: emit one `agent_timing_inconsistent` warning per affected
+canonical agent, mark timing partial, and leave the per-agent and aggregate wait
+share null. `uncoveredWallClockMs` is zero only for measured complete coverage,
+positive for a measured gap, and null when timing is unavailable because bounds
+or classified intervals are missing. A non-empty unsupported interval kind is
+malformed timing evidence: it contributes no active/wait time and, when lifecycle
+bounds exist, makes timing partial; it is not guessed to be one or the other.
+Aggregate timing is available only when every canonical
+agent has available timing; otherwise its totals and wait share are null. Tool-owned spans may repeat the opaque agent ID and may include
+the existing safe process outcome, retry/recovery, `failure_class`, bounded
+`reason_summary`, and `error.kind` fields.
+
+Optional outcomes preserve unknown values. `recovered` is null when no
+attributed canonical call exports it; it is false only for explicit false
+telemetry and true when an observed canonical call says true. Retry and process
+fields use the same unknown-preserving rule.
+
+`codex.project.identity` is an optional opaque stable repository/project
+identity, shared by a checkout and its worktrees. It is not an absolute path
+and does not replace exact `span.cwd`: **Project cwd remains the dashboard and
+report scope**. The Collector does not synthesize project identity from a cwd
+basename or any path similarity.
+
+The report validates, but never repairs, this topology. Duplicate spawn IDs,
+orphan/self/cyclic or inconsistent parents, inconsistent depth, unsupported
+versions, missing terminal outcomes, unattributed tool/model activity, and bad
+active/wait intervals are machine-readable coverage warnings. A clean `available`
+result requires observed v1 records and no such warnings; `partial` means
+some contract evidence is malformed or incomplete; `unavailable` means no
+agent contract evidence was exported. No ASCII tree is emitted for partial or
+cyclic topology.
+
+Agent IDs, delegation IDs, trace IDs, and project identity are high-cardinality
+diagnostic fields. They occur only in bounded report/dashboard rows and Tempo
+links; they must never become Prometheus labels or unbounded dashboard grouping
+dimensions. This contract excludes thread IDs, turn IDs, prompts, task text,
+tool arguments/output, account identity, and machine identity. It never derives
+agent identity, parentage, role, status, completion, timing, or project identity
+from span parentage, ordering, duration, model name, trace age, raw thread/turn
+IDs, or directory names.
+
 ## KPI formulas
 
 | KPI | Source and formula | Filtering and deduplication |
@@ -159,9 +235,13 @@ The dashboard and report must surface, rather than silently discard:
 - sampling/tool overlap and search-preview time coverage;
 - missing safe process outcomes, which makes process and combined failure rates unavailable;
 - inability to distinguish user-visible turns from orchestration/setup traces;
-- large hydrated JSON responses (`hydratedSpanCount` and
-  `hydratedPayloadBytes` are diagnostics only; JSON bytes are not Tempo's
-  internal per-trace accounting and are never compared as equivalent units);
+- large hydrated JSON responses and span amplification (`hydratedSpanCount`,
+  `hydratedPayloadBytes`, and hydration timing are diagnostics only; JSON bytes
+  are not Tempo's internal per-trace accounting and are never compared as
+  equivalent units). The report warns at 10,000 spans or 15,000,000 HTTP JSON
+  bytes per trace;
+- agent-contract unavailable/partial coverage, malformed topology, missing
+  agent outcomes, unattributed activity, and inconsistent timing;
 - disagreement between trace-derived and structured-log-derived tool totals.
 
 Each warning includes a machine-readable `code`, `count`, and short message.
@@ -217,6 +297,12 @@ bounded contract on the original trace:
 - safe `process.exit_code` and `process.success` for shell commands;
 - stable `project.root` or repository identity shared by a saved checkout and
   its Codex worktrees.
+
+For agent execution analysis it additionally needs the optional
+`codex.agent.lifecycle` v1 contract above: trace-local agent/delegation identity,
+explicit lifecycle and terminal status, bounded role/kind, interval kind, and
+safe ownership on tool/model spans. The report does not reconstruct these fields
+when stock instrumentation omits them.
 
 The Collector must not synthesize any of these from command output text, model
 name, short duration, span count, or the final directory name. Until the emitter

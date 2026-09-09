@@ -103,11 +103,17 @@ try {
                 O=@($rows | Where-Object { $_.source -eq 'C' -and ((Get-TraceProperty $_ 'process.exit_code') -ne $null -or (Get-TraceProperty $_ 'process.success') -ne $null) })
                 N=@($rows | Where-Object { $_.source -eq 'C' -and (((Get-TraceProperty $_ 'process.exit_code') -ne $null -and [int](Get-TraceProperty $_ 'process.exit_code') -ne 0) -or ((Get-TraceProperty $_ 'process.success') -eq $false)) })
             }
-            $prefix = 'WITH ' + ((@('P','F','X','U','A','B','C','D','E','L','Q','O','N') | ForEach-Object { $_+' AS ('+(ConvertTo-SqlTable $tables[$_])+')' }) -join ', ') + ', '
             foreach ($id in @(1,2,7,11,13,17)) {
                 $panel = @($dashboard.panels | Where-Object id -eq $id)[0]
                 $expression = @($panel.targets | Where-Object { $_.PSObject.Properties['expression'] })[-1].expression
-                $body = @{from=[string]$fromMs;to=[string]$toMs;queries=@(@{refId='Z';datasource=@{type='__expr__';uid='__expr__'};type='sql';expression=$prefix+($expression -replace '^WITH\s+','')})} | ConvertTo-Json -Depth 8
+                $baseRefs = [System.Collections.Generic.List[string]]::new()
+                foreach ($ref in @('P','F','X','U','A','B','C','D','E','L','Q','O','N')) {
+                    if ($expression -match "(?i)\b(?:FROM|JOIN)\s+$ref\b") { $baseRefs.Add($ref) }
+                }
+                $prefix = 'WITH ' + ((@($baseRefs) | ForEach-Object { $_+' AS ('+(ConvertTo-SqlTable $tables[$_])+')' }) -join ', ') + ', '
+                $sqlExpression = $prefix + ($expression -replace '^WITH\s+','')
+                if ($sqlExpression.Length -gt 10000) { throw "Lifecycle SQL panel $id synthetic expression exceeds Grafana's 10000-character limit." }
+                $body = @{from=[string]$fromMs;to=[string]$toMs;queries=@(@{refId='Z';datasource=@{type='__expr__';uid='__expr__'};type='sql';expression=$sqlExpression})} | ConvertTo-Json -Depth 8
                 try { $response = Invoke-RestMethod -Uri "$GrafanaBaseUrl/api/ds/query" -Method Post -ContentType 'application/json' -Body $body }
                 catch { throw "Lifecycle SQL panel $id failed: $($_.Exception.Message)" }
                 Assert-Equal $response.results.Z.status 200 "Grafana SQL panel $id status"

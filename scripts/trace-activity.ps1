@@ -36,7 +36,14 @@ function ConvertFrom-TraceActivity($Response, [string]$TraceId, [long]$FromMs, [
         'codex.turn.token_usage.input_tokens','codex.turn.token_usage.output_tokens',
         'codex.turn.token_usage.cached_input_tokens','codex.turn.token_usage.reasoning_output_tokens',
         'codex.turn.token_usage.total_tokens','tool_name','codex.tool.name','call_id','codex.tool.call_id',
-        'nested','retry_count','recovered','failure_class','error.kind','process.exit_code','process.success')
+        'nested','retry_count','recovered','failure_class','reason_summary','error.kind','process.exit_code','process.success',
+        # Agent execution v1 is deliberately allowlisted. These opaque, trace-local
+        # identifiers are only carried into bounded report/table rows; they are never
+        # promoted to metric labels or used to infer absent topology.
+        'codex.agent.signal_version','codex.agent.instance_id','codex.agent.parent_instance_id',
+        'codex.agent.delegation_id','codex.agent.delegation_depth','codex.agent.role',
+        'codex.agent.task_kind','codex.agent.lifecycle','codex.agent.interval_kind',
+        'codex.agent.status','codex.agent.reasoning_effort','codex.project.identity')
     foreach ($span in $spans) {
         $id = [string](Get-TraceProperty $span 'spanId' '')
         if (-not $id) { throw 'Full trace span is missing its ID.' }
